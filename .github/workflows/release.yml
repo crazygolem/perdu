@@ -1,14 +1,15 @@
-# Publishes each release perdu's private repository pushes here as a tag,
-# vX.Y.Z with an optional suffix, whose message holds the release notes:
-# the tag becomes a GitHub Release, a suffixed version a pre-release, and a
-# final release's manual goes to the site, which serves one version, the
-# latest. Run by hand, it deploys main's manual to the site. This file is
-# copied from the private repository with each release: an edit made here
-# is lost at the next.
+# Publishes what perdu's private repository pushes here. A push to main, by a
+# final release or an update without one, deploys its manual to the site, which
+# serves one version, the latest. A tag, vX.Y.Z with an optional suffix, whose
+# message holds the release notes, becomes a GitHub Release, a suffixed version
+# a pre-release. Run by hand on main, it deploys main's manual again. This file
+# is copied from the private repository with each release and update: an edit
+# made here is lost at the next.
 name: Release
 
 on:
   push:
+    branches: [main]
     tags: ["v*"]
   workflow_dispatch:
 
@@ -20,6 +21,7 @@ concurrency:
 
 jobs:
   site:
+    if: github.ref_type == 'branch'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -38,7 +40,6 @@ jobs:
 
   pages:
     needs: site
-    if: github.event_name == 'workflow_dispatch' || !contains(github.ref_name, '-')
     runs-on: ubuntu-24.04
     permissions:
       pages: write
@@ -51,7 +52,7 @@ jobs:
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
 
   release:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && github.ref_type == 'tag'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
