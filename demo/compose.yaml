@@ -1,0 +1,287 @@
+# perdu's demo: perdu showing the dashboard of a family's home server, behind
+# a front end that stands in for its login, over containers that carry the
+# services' labels and run nothing else. See README.md for how to run it and
+# what to look at.
+#
+# perdu reads labels under its own prefix here, perdu-demo rather than
+# perdu: a perdu already watching the same daemon shows none of the demo's
+# tiles, and the demo none of its services. A stack of your own writes
+# perdu.name where this file writes perdu-demo.name.
+
+# The services: idle containers carrying the labels. perdu only reads them,
+# so each just sleeps, on no network, and holds nothing a stop could lose,
+# so it is killed at once rather than waited out.
+x-service: &service
+  image: docker.io/alpine:3.24
+  command: ["tail", "-f", "/dev/null"]
+  network_mode: none
+  stop_signal: SIGKILL
+
+services:
+  perdu:
+    # PERDU_IMAGE runs another image, such as one built from perdu's source.
+    image: ${PERDU_IMAGE:-ghcr.io/crazygolem/perdu:latest}
+    command:
+      - --namespace=perdu-demo
+      - --default-locale=en
+      # The locales the labels below name, fr and de, and the default one.
+      - --locales=~labels,en
+      # The viewer's groups and name, from the headers the front end sets.
+      - '--audience-expr=headers["remote-groups"] | split(",")'
+      - '--data=name=headers["remote-name"]'
+    environment:
+      DOCKER_HOST: tcp://socket-proxy:2375
+    networks:
+      - default
+      - docker-api
+    depends_on:
+      - socket-proxy
+    restart: unless-stopped
+
+  socket-proxy:
+    image: docker.io/tecnativa/docker-socket-proxy:v0.5.0
+    environment:
+      # The container listing; the event stream and _ping are on by default,
+      # and the methods that write are off.
+      CONTAINERS: 1
+      VERSION: 0
+      # IPv4 only: the compose network reaches it over IPv4.
+      DISABLE_IPV6: 1
+    networks:
+      - docker-api
+    volumes:
+      # DOCKER_SOCKET names another socket, such as podman's.
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+    restart: unless-stopped
+
+  # The login: see frontend/Caddyfile.
+  frontend:
+    image: docker.io/caddy:2-alpine
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - ./frontend/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./frontend/login.html:/srv/login.html:ro
+    depends_on:
+      - perdu
+    restart: unless-stopped
+
+  # Uncategorized, so it comes first. It links nowhere, being instructions
+  # rather than a place to go, and has no icon, so its initials stand in.
+  grandma:
+    <<: *service
+    labels:
+      perdu-demo.enable: "true"
+      perdu-demo.name.en: "Photos for Grandma"
+      perdu-demo.name.fr: "Photos pour Mamie"
+      perdu-demo.name.de: "Fotos für Oma"
+      perdu-demo.description.en: "No internet? The family photos are also on the white USB stick in the drawer under the TV. Plug it into the side of the TV, press SOURCE on the remote, choose USB, then Photos, and use the arrows to go from one photo to the next. If nothing shows, call Sam."
+      perdu-demo.description.fr: "Pas d'internet ? Les photos de famille sont aussi sur la clé USB blanche, dans le tiroir sous la télé. Branche-la sur le côté de la télé, appuie sur SOURCE sur la télécommande, choisis USB, puis Photos, et passe d'une photo à l'autre avec les flèches. Si rien ne s'affiche, appelle Sam."
+      perdu-demo.description.de: "Kein Internet? Die Familienfotos sind auch auf dem weißen USB-Stick in der Schublade unter dem Fernseher. Steck ihn seitlich in den Fernseher, drück auf der Fernbedienung SOURCE, wähl USB und dann Fotos, und blättere mit den Pfeiltasten von Foto zu Foto. Wenn nichts erscheint, ruf Sam an."
+      perdu-demo.audience: "users"
+
+  nextcloud:
+    <<: *service
+    labels:
+      perdu-demo.enable: "true"
+      perdu-demo.name: "Nextcloud"
+      perdu-demo.description.en: "Files, calendars and contacts, synced across the family's devices"
+      perdu-demo.description.fr: "Fichiers, agendas et contacts, synchronisés sur les appareils de la famille"
+      perdu-demo.url: "https://cloud.home.example/"
+      perdu-demo.icon: "di:nextcloud"
+      perdu-demo.category: "Documents"
+      perdu-demo.audience: "users"
+      perdu-demo.actions.1-files.name.en: "Files"
+      perdu-demo.actions.1-files.name.fr: "Fichiers"
+      perdu-demo.actions.1-files.url: "https://cloud.home.example/apps/files/"
+      perdu-demo.actions.1-files.icon: "fa:solid-folder"
+      perdu-demo.actions.2-calendar.name.en: "Calendar"
+      perdu-demo.actions.2-calendar.name.fr: "Agenda"
+      perdu-demo.actions.2-calendar.url: "https://cloud.home.example/apps/calendar/"
+      perdu-demo.actions.2-calendar.icon: "fa:solid-calendar-days"
+      perdu-demo.actions.3-contacts.name.en: "Contacts"
+      perdu-demo.actions.3-contacts.name.fr: "Contacts"
+      perdu-demo.actions.3-contacts.url: "https://cloud.home.example/apps/contacts/"
+      perdu-demo.actions.3-contacts.icon: "fa:solid-address-book"
+
+  paperless:
+    <<: *service
+    labels:
+      perdu-demo.enable: "true"
+      perdu-demo.name: "Paperless-ngx"
+      perdu-demo.description.en: "Letters, bills and receipts, scanned and searchable"
+      perdu-demo.description.fr: "Courriers, factures et reçus, numérisés et consultables"
+      perdu-demo.url: "https://paperless.home.example/"
+      perdu-demo.icon: "di:paperless-ngx"
+      perdu-demo.category: "Documents"
+      perdu-demo.audience: "users"
+
+  # An icon given by its URL, which the viewer's browser fetches itself.
+  bookstack:
+    <<: *service
+    labels:
+      perdu-demo.enable: "true"
+      perdu-demo.name: "BookStack"
+      perdu-demo.description.en: "The family's recipes and how-tos"
+      perdu-demo.description.fr: "Les recettes et les modes d'emploi de la famille"
+      perdu-demo.url: "https://wiki.home.example/"
+      perdu-demo.icon: "https://cdn.jsdelivr.net/gh/selfhst/icons@main/svg/bookstack-dark.svg"
+      perdu-demo.category: "Documents"
+      perdu-demo.audience: "users"
+
+  home-assistant:
+    <<: *service
+    labels:
+      perdu-demo.enable: "true"
+      perdu-demo.name: "Home Assistant"
+      perdu-demo.description.en: "Lights, heating and the garden's watering"
+      perdu-demo.description.fr: "Lumières, chauffage et arrosage du jardin"
+      perdu-demo.url: "https://ha.home.example/"
+      perdu-demo.icon: "di:home-assistant"
+      perdu-demo.category: "Home"
+      perdu-demo.audience: "users"
+
+  # Shown to everyone, guests included.
+  jellyfin:
+    <<: *service
+    labels:
+      perdu-demo.enable: "true"
+      perdu-demo.name: "Jellyfin"
+      perdu-demo.description.en: "Films and series"
+      perdu-demo.description.fr: "Films et séries"
+      perdu-demo.description.de: "Filme und Serien"
+      perdu-demo.url: "https://jellyfin.home.example/"
+      perdu-demo.icon: "di:jellyfin"
+      perdu-demo.category: "Media"
+
+  # An icon given by its URL, which the viewer's browser fetches itself.
+  navidrome:
+    <<: *service
+    labels:
+      perdu-demo.enable: "true"
+      perdu-demo.name: "Navidrome"
+      perdu-demo.description.en: "The family's music"
+      perdu-demo.description.fr: "La musique de la famille"
+      perdu-demo.url: "https://music.home.example/"
+      perdu-demo.icon: "https://cdn.jsdelivr.net/gh/selfhst/icons@main/svg/navidrome.svg"
+      perdu-demo.category: "Media"
+
+  immich:
+    <<: *service
+    labels:
+      perdu-demo.enable: "true"
+      perdu-demo.name: "Immich"
+      perdu-demo.description.en: "Photos and videos, backed up from everyone's phone"
+      perdu-demo.description.fr: "Photos et vidéos, sauvegardées depuis le téléphone de chacun"
+      perdu-demo.url: "https://photos.home.example/"
+      perdu-demo.icon: "di:immich"
+      perdu-demo.category: "Media"
+      perdu-demo.audience: "users"
+
+  # In English alone: the French and German pages fall back to it. Among
+  # the tools, but for administrators alone: a section places a tile, and
+  # its audience alone says who sees it.
+  forgejo:
+    <<: *service
+    labels:
+      perdu-demo.enable: "true"
+      perdu-demo.name: "Forgejo"
+      perdu-demo.description.en: "The home server's code and configuration"
+      perdu-demo.url: "https://git.home.example/"
+      perdu-demo.icon: "di:forgejo"
+      perdu-demo.category: "Tools"
+      perdu-demo.audience: "admins"
+
+  vaultwarden:
+    <<: *service
+    labels:
+      perdu-demo.enable: "true"
+      perdu-demo.name: "Vaultwarden"
+      perdu-demo.description.en: "Passwords, shared within the family"
+      perdu-demo.description.fr: "Les mots de passe, partagés en famille"
+      perdu-demo.url: "https://vault.home.example/"
+      perdu-demo.icon: "di:vaultwarden"
+      perdu-demo.category: "Tools"
+      perdu-demo.audience: "users"
+
+  # The login service, for administrators, with two actions in Tools, a
+  # section it isn't in, so that each is a tile of its own there, shown to
+  # those its own audience names. Log out links to the front end's /logout.
+  authentik:
+    <<: *service
+    labels:
+      perdu-demo.enable: "true"
+      perdu-demo.name: "authentik"
+      perdu-demo.description.en: "Accounts and sign-in for every service"
+      perdu-demo.description.fr: "Les comptes et la connexion de tous les services"
+      perdu-demo.url: "https://auth.home.example/if/admin/"
+      perdu-demo.icon: "di:authentik"
+      perdu-demo.category: "~admin"
+      perdu-demo.audience: "admins"
+      perdu-demo.actions.password.name.en: "Change password"
+      perdu-demo.actions.password.name.fr: "Changer de mot de passe"
+      perdu-demo.actions.password.url: "https://auth.home.example/if/user/#/settings"
+      perdu-demo.actions.password.icon: "fa:solid-key"
+      perdu-demo.actions.password.category: "Tools"
+      perdu-demo.actions.password.audience: "users"
+      perdu-demo.actions.logout.name.en: "Log out"
+      perdu-demo.actions.logout.name.fr: "Se déconnecter"
+      perdu-demo.actions.logout.url: "/logout"
+      perdu-demo.actions.logout.icon: "fa:solid-right-from-bracket"
+      perdu-demo.actions.logout.category: "Tools"
+
+  grafana:
+    <<: *service
+    labels:
+      perdu-demo.enable: "true"
+      perdu-demo.name: "Grafana"
+      perdu-demo.description.en: "Dashboards of the server's health"
+      perdu-demo.description.fr: "Tableaux de bord de l'état du serveur"
+      perdu-demo.url: "https://grafana.home.example/"
+      perdu-demo.icon: "di:grafana"
+      perdu-demo.category: "~admin"
+      perdu-demo.audience: "admins"
+
+  uptime-kuma:
+    <<: *service
+    labels:
+      perdu-demo.enable: "true"
+      perdu-demo.name: "Uptime Kuma"
+      perdu-demo.description.en: "Alerts when a service goes down"
+      perdu-demo.description.fr: "Des alertes quand un service tombe en panne"
+      perdu-demo.url: "https://status.home.example/"
+      perdu-demo.icon: "di:uptime-kuma"
+      perdu-demo.category: "~admin"
+      perdu-demo.audience: "admins"
+
+  adguard-home:
+    <<: *service
+    labels:
+      perdu-demo.enable: "true"
+      perdu-demo.name: "AdGuard Home"
+      perdu-demo.description.en: "The network's DNS, and its ad blocking"
+      perdu-demo.description.fr: "Le DNS du réseau, et son blocage des publicités"
+      perdu-demo.url: "https://dns.home.example/"
+      perdu-demo.icon: "di:adguard-home"
+      perdu-demo.category: "~admin"
+      perdu-demo.audience: "admins"
+
+  traefik:
+    <<: *service
+    labels:
+      perdu-demo.enable: "true"
+      perdu-demo.name: "Traefik"
+      perdu-demo.description.en: "Routes and certificates"
+      perdu-demo.description.fr: "Routes et certificats"
+      perdu-demo.url: "https://traefik.home.example/dashboard/"
+      perdu-demo.icon: "di:traefik"
+      perdu-demo.category: "~admin"
+      perdu-demo.audience: "admins"
+
+networks:
+  # The default network, with access to the internet, for the icons perdu
+  # fetches from the CDN.
+  default:
+  # perdu's and the socket proxy's alone, with no way out.
+  docker-api:
+    internal: true

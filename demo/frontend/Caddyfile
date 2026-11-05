@@ -1,0 +1,50 @@
+# The demo's front end, standing in for a login: where a real deployment's
+# proxy signs a viewer in with an identity provider and tells perdu their
+# groups and name, this one lets them pick one of three logins on /login,
+# remembers it in a cookie of its own, and turns it into the identity
+# headers perdu reads, Remote-Groups and Remote-Name. /logout forgets it,
+# and a request with no login is sent to /login.
+{
+	admin off
+}
+
+:80 {
+	# Each login's groups and name, by the cookie.
+	map {cookie.demo_login} {demo_groups} {demo_name} {
+		guest guest ""
+		user users Sam
+		admin users,admins Alex
+	}
+
+	handle /login {
+		root * /srv
+		rewrite * /login.html
+		file_server
+	}
+
+	@login {
+		method POST
+		path_regexp login ^/login/(guest|user|admin)$
+	}
+	handle @login {
+		header Set-Cookie "demo_login={re.login.1}; Path=/; HttpOnly; SameSite=Lax"
+		redir * / 303
+	}
+
+	handle /logout {
+		header Set-Cookie "demo_login=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax"
+		redir * /login 303
+	}
+
+	handle {
+		@anonymous not vars {cookie.demo_login} guest user admin
+		redir @anonymous /login 303
+
+		# Replacing whatever the browser sends, so that a viewer can't
+		# name groups of their own.
+		reverse_proxy perdu:8080 {
+			header_up Remote-Groups {demo_groups}
+			header_up Remote-Name {demo_name}
+		}
+	}
+}

@@ -1,0 +1,21 @@
+/* The site in perdu's colours: those of the page perdu serves, its light
+ * scheme's accent on the header and links, its dark scheme the Nord greys
+ * the page's dark scheme takes. */
+[data-md-color-scheme="default"] {
+	--md-primary-fg-color: #0b6f8c;
+	--md-primary-fg-color--dark: #085a72;
+	--md-accent-fg-color: #0b6f8c;
+	--md-typeset-a-color: #0b6f8c;
+	--md-default-bg-color: #f4f6f8;
+	--md-default-fg-color: #1e2730;
+}
+
+[data-md-color-scheme="slate"] {
+	--md-hue: 220;
+	--md-primary-fg-color: #3b4252;
+	--md-primary-fg-color--dark: #2e3440;
+	--md-accent-fg-color: #88c0d0;
+	--md-typeset-a-color: #88c0d0;
+	--md-default-bg-color: #2e3440;
+	--md-code-bg-color: #3b4252;
+}

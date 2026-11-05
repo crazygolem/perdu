@@ -1,0 +1,62 @@
+# The manual's site, which the Pages workflow builds from docs/ with
+# Zensical. Headings take GitHub's anchors, so that a link into the manual
+# works alike on the site and on GitHub; perdu's icon is a custom icon,
+# inlined, so that it follows the colour scheme's toggle.
+site_name: perdu
+site_url: https://crazygolem.github.io/perdu/
+site_description: The operator manual of perdu, a landing page for self-hosted application stacks
+repo_url: https://github.com/crazygolem/perdu
+repo_name: crazygolem/perdu
+edit_uri: ""
+copyright: >-
+  © 2026 The perdu authors ·
+  The manual is licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>,
+  its examples under <a href="https://github.com/crazygolem/perdu/blob/main/docs/LICENSE">0BSD</a>
+docs_dir: docs
+nav:
+  - README.md
+  - deploy.md
+  - flags.md
+  - labels.md
+  - locales.md
+  - icons.md
+  - rules.md
+  - template.md
+  - logs.md
+  - how-it-works.md
+markdown_extensions:
+  - toc:
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - tables
+  - fenced_code
+  - github-callouts
+theme:
+  name: material
+  custom_dir: overrides
+  favicon: assets/favicon.svg
+  icon:
+    logo: perdu/icon
+  features:
+    - navigation.sections
+    - navigation.footer
+    - content.code.copy
+  font: false
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Light mode
+extra_css:
+  - assets/perdu.css

@@ -1,0 +1,73 @@
+# Publishes each release perdu's private repository pushes here as a tag,
+# vX.Y.Z with an optional suffix, whose message holds the release notes:
+# the tag becomes a GitHub Release, a suffixed version a pre-release, and a
+# final release's manual goes to the site, which serves one version, the
+# latest. Run by hand, it deploys main's manual to the site. This file is
+# copied from the private repository with each release: an edit made here
+# is lost at the next.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  site:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+      - run: pip install -r requirements.txt
+      - run: zensical build --strict
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+  pages:
+    needs: site
+    if: github.event_name == 'workflow_dispatch' || !contains(github.ref_name, '-')
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+  release:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The tag is fetched again, since the checkout may have written it
+      # without its message.
+      - name: Make the tag a GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          git fetch --quiet --force origin "refs/tags/$TAG:refs/tags/$TAG"
+          git tag -l --format='%(contents:body)' "$TAG" > "$RUNNER_TEMP/notes.md"
+          prerelease=
+          case $TAG in
+          *-*) prerelease=--prerelease ;;
+          esac
+          gh release create "$TAG" --verify-tag --title "perdu ${TAG#v}" --notes-file "$RUNNER_TEMP/notes.md" $prerelease

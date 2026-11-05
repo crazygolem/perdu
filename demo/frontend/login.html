@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="color-scheme" content="light dark">
+	<title>Log in · perdu's demo</title>
+	<style>
+		body {
+			margin: 0;
+			padding: 3rem 1rem;
+			background: Canvas;
+			color: CanvasText;
+			font: 1rem/1.5 system-ui, sans-serif;
+		}
+		main {
+			max-width: 26rem;
+			margin: 0 auto;
+		}
+		ul {
+			margin: 2rem 0 0;
+			padding: 0;
+			list-style: none;
+		}
+		li + li {
+			margin-top: 1.25rem;
+		}
+		button {
+			width: 100%;
+			padding: 0.6rem 1rem;
+			font: inherit;
+			font-weight: 600;
+			cursor: pointer;
+		}
+		li p {
+			margin: 0.35rem 0 0;
+			font-size: 0.9rem;
+			opacity: 0.8;
+		}
+	</style>
+</head>
+<body>
+	<main>
+		<h1>Log in</h1>
+		<p>This demo has no accounts: choose who to be. A real deployment signs you in with its identity provider, and its proxy tells perdu your groups and your name.</p>
+		<ul>
+			<li>
+				<form method="post" action="/login/guest"><button aria-describedby="guest">Log in as a guest</button></form>
+				<p id="guest">Sees the media.</p>
+			</li>
+			<li>
+				<form method="post" action="/login/user"><button aria-describedby="user">Log in as Sam, a user</button></form>
+				<p id="user">Sees everything but the administration section and tools.</p>
+			</li>
+			<li>
+				<form method="post" action="/login/admin"><button aria-describedby="admin">Log in as Alex, an administrator</button></form>
+				<p id="admin">Sees everything.</p>
+			</li>
+		</ul>
+	</main>
+</body>
+</html>

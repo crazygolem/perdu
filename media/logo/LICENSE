@@ -1,0 +1,27 @@
+perdu's icon and favicon
+
+Copyright 2026 The perdu authors. All rights reserved.
+
+This licence covers perdu's icon, its variants and its favicon: the SVG
+files in this directory, and their copies wherever perdu's files carry
+them, such as in perdu's binary and image, on its manual's site, and in
+the pages perdu serves. The licences of perdu's other files don't cover
+them.
+
+You may, without asking:
+
+1. Redistribute them unmodified as part of perdu, such as in copies of
+   perdu's image or of its public repository.
+2. Use them unmodified to refer to perdu, such as in an article about
+   perdu, beside a link to perdu's site or repository, or on a dashboard's
+   tile linking to a perdu instance.
+
+Scaling them, converting them to another image format, such as PNG or
+ICO, and styling them through the custom properties they read, as the
+pages perdu serves do, doesn't modify them.
+
+Any other use, modified or not, needs the permission of the perdu authors,
+which you can ask for through perdu's public repository,
+https://github.com/crazygolem/perdu.
+
+THE FILES ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
