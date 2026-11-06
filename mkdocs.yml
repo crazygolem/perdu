@@ -38,6 +38,8 @@ theme:
   favicon: assets/favicon.svg
   icon:
     logo: perdu/icon
+    admonition:
+      important: lucide/message-square-warning
   features:
     - navigation.sections
     - navigation.footer

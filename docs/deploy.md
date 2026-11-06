@@ -2,7 +2,7 @@
 
 Perdu is one binary, packaged as a container image.
 
-It needs read access to the Docker API, to find the services your labels describe, and is meant to run behind a reverse proxy, which authenticates your users and tells perdu who they are.
+It needs read access to the docker API, to find the services your labels describe, and is meant to run behind a reverse proxy, which authenticates your users and tells perdu who they are.
 [Non-standard setups](#non-standard-setups) gives hints for running it without one, or outside a container.
 
 By default, perdu listens on all interfaces on port 8080, configurable via `--listen`.
@@ -10,7 +10,7 @@ By default, perdu listens on all interfaces on port 8080, configurable via `--li
 See [flags and environment variables](flags.md) for detailed descriptions of the available options and required flags.
 Run `perdu -h` for a summary.
 
-## The Docker image
+## The docker image
 
 Pull the image from GitHub's container registry:
 
@@ -27,7 +27,7 @@ The image also holds the CA certificates that fetching `di:` icons needs, and th
 
 ## Compose stack example
 
-The following snippet shows a stack where perdu reaches the Docker API through a socket proxy (see [Access to the Docker API](#access-to-the-docker-api)), with one labelled service:
+The following snippet shows a stack where perdu reaches the docker API through a socket proxy (see [Access to the docker API](#access-to-the-docker-api)), with one labelled service:
 
 ```yaml
 services:
@@ -90,9 +90,9 @@ Your reverse proxy joins the `default` network and sends perdu's traffic to `per
 > This is a **simplified example** to get you started quickly, in a trusted environment.
 > A production setup should be hardened; read on to find out how.
 
-## Access to the Docker API
+## Access to the docker API
 
-Perdu reads the Docker API and never changes anything through it.
+Perdu reads the docker API and never changes anything through it.
 These are the calls it makes, so that you can open a proxy to them alone, each path except the ping's under the API version, as in `/v1.47/containers/json`:
 
 | Call                   | What it reads                                                                                                                                                                                                                   |
@@ -137,9 +137,9 @@ Perdu refuses to start, naming the variable, where Docker's client would quietly
 
 It also refuses a `DOCKER_HOST` or a `DOCKER_API_VERSION` that doesn't parse, and certificate files it can't read.
 
-The daemon can be Docker Engine, or podman through its Docker-compatible API.
+The daemon can be Docker Engine, or Podman through its Docker-compatible API.
 
-The Docker API connection **never goes through a proxy**, whatever `HTTPS_PROXY` and the other proxy variables say ([Fetching icons through a proxy](#fetching-icons-through-a-proxy)): Docker can set those variables in every container it creates, where they would send the calls meant for a socket proxy on the compose network to a proxy that can't reach it.
+The docker API connection **never goes through a proxy**, whatever `HTTPS_PROXY` and the other proxy variables say ([Fetching icons through a proxy](#fetching-icons-through-a-proxy)): docker can set those variables in every container it creates, where they would send the calls meant for a socket proxy on the compose network to a proxy that can't reach it.
 A daemon reachable only through a forward proxy is not supported.
 
 ## The reverse proxy
@@ -285,7 +285,7 @@ Perdu uses cookies for presentational purposes, not for access control, but you 
 
 Perdu fetches `di:` icons from jsDelivr's CDN ([Icons](icons.md#di-dashboard-icons)), and those fetches honour the standard proxy variables, `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY`, in upper or lower case.
 
-Nothing else perdu sends goes through them, including the Docker API connection.
+Nothing else perdu sends goes through them, including the docker API connection.
 
 ## Starting
 
@@ -295,7 +295,7 @@ It then listens on its addresses: an address the system refuses also stops it at
 Perdu then waits for two things, side by side, for at most **60 seconds**:
 
 * the icons directory, if `--icons-dir` is set, to exist and be a readable directory;
-* the Docker event stream to connect.
+* the docker event stream to connect.
 
 Once both are there, the first build lists the containers and renders the pages, and perdu logs `startup complete` once they are served.
 Until then every request gets a `503`.
@@ -306,7 +306,7 @@ A first build that fails while rendering also stops perdu, since there is no pag
 
 When perdu starts as part of a compose stack, its first page can show part of the stack, and the builds that follow the other containers' events complete it within seconds.
 
-Once perdu has served a page, it keeps serving: Docker becoming unreachable, a listing failing, or the event stream dropping leaves the last page served while perdu retries in the background, and logs that it does ([Reading the logs](logs.md)).
+Once perdu has served a page, it keeps serving: docker becoming unreachable, a listing failing, or the event stream dropping leaves the last page served while perdu retries in the background, and logs that it does ([Reading the logs](logs.md)).
 
 ## Refreshing
 
@@ -316,7 +316,7 @@ Sending perdu `SIGHUP` asks it to refresh:
 docker compose kill -s HUP perdu
 ```
 
-A refresh reloads every icon the page uses, reopens the Docker event stream, and builds the page again from a fresh listing ([How perdu works](how-it-works.md#refreshes)): it is how a change to the files in `--icons-dir` takes effect.
+A refresh reloads every icon the page uses, reopens the docker event stream, and builds the page again from a fresh listing ([How perdu works](how-it-works.md#refreshes)): it is how a change to the files in `--icons-dir` takes effect.
 Use it after changing your icons, after a `di:` icon changed upstream, or when the page seems to have stopped following your containers.
 
 The signal has to reach perdu's own process.
@@ -364,7 +364,7 @@ Perdu's defaults need no proxy, but without one:
 Perdu runs the same as a plain binary, extracted from the image or [built from its sources](#built-from-the-sources), but what the image arranged is then yours:
 
 * **Listening**: perdu listens on every address of the machine by default; for local uses or behind a proxy on the same machine, `--listen localhost:8080` keeps it off the network.
-* **The Docker API**: without `DOCKER_HOST`, perdu uses the daemon's socket, `/var/run/docker.sock`, as Docker's client does, so the user running perdu needs access to it, which is root-equivalent ([Access to the Docker API](#access-to-the-docker-api)); `DOCKER_HOST` can point it at a socket proxy instead.
+* **The docker API**: without `DOCKER_HOST`, perdu uses the daemon's socket, `/var/run/docker.sock`, as Docker's client does, so the user running perdu needs access to it, which is root-equivalent ([Access to the docker API](#access-to-the-docker-api)); `DOCKER_HOST` can point it at a socket proxy instead.
 * **Refreshing**: `SIGHUP` goes to perdu's own process, e.g. `kill -HUP <pid>` ([Refreshing](#refreshing)).
 * **CA certificates**, for `di:` icons, are the system's.
 

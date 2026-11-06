@@ -1,6 +1,10 @@
 # Changelog
 
-perdu's release notes, newest first: for each version, what changed for whoever runs perdu, and what to do when upgrading.
+Perdu's release notes, newest first: for each version, what changed for whoever runs perdu, and what to do when upgrading.
+
+## 0.1.1 — 2026-11-06
+
+* Added missing licences to the image's `/licenses/` directory and the public repository's `NOTICES` file.
 
 ## 0.1.0 — 2026-11-05
 

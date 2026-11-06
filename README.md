@@ -26,7 +26,7 @@ I'd love to hear your feedback if you try perdu; don't hesitate to open a [discu
 docker pull ghcr.io/crazygolem/perdu:latest
 ```
 
-To try it on the machine running Docker, give it the Docker socket, and the locale its pages fall back to, the one flag it requires:
+To try it on the machine running docker, give it the docker socket, and the locale its pages fall back to, the one flag it requires:
 
 ```sh
 docker run --rm -p 127.0.0.1:8080:8080 \

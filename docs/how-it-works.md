@@ -12,14 +12,14 @@ Perdu works on three fronts, which meet in the pages:
 * **Pages** run scripts in the viewer's browser that customize the page's look and enable dynamic features.
 
 ```
-      Docker events, a refresh,                                           BUILDS
+      docker events, a refresh,                                           BUILDS
       an icon having loaded
                 │
                 ▼
       build coordinator: decides when a build runs
                 │
                 ▼
-      a build:  • discovery      ◄── Docker: the containers and their labels
+      a build:  • discovery      ◄── docker: the containers and their labels
                 • configuration
                 • rendering      ◄── resource cache ◄── your icons directory,
                 │                                       Font Awesome, the CDN
@@ -38,7 +38,7 @@ request │       │ the page                  │ on the response
 
 | Part                  | What it does                                                                                                                                     |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| The event stream      | perdu's connection to Docker's events: it tells the build coordinator when a container carrying `<prefix>.enable` is created, updated or removed |
+| The event stream      | perdu's connection to docker's events: it tells the build coordinator when a container carrying `<prefix>.enable` is created, updated or removed |
 | The build coordinator | decides when a build runs, and runs one at a time                                                                                                |
 | Discovery             | a build's first phase: lists the containers carrying `<prefix>.enable`, and groups them into services                                            |
 | Configuration         | a build's second phase: reads the services' labels into what each page shows                                                                     |
@@ -57,8 +57,8 @@ Everything but the page's scripts runs in perdu's one process.
 
 A build runs whenever something may have changed what the page shows, a **trigger** as the logs call it:
 
-* at startup, once perdu has reached Docker and, with `--icons-dir` set, found your icons directory ([Deploying perdu](deploy.md#starting));
-* when a container carrying `<prefix>.enable` is created, updated or removed, as Docker's event stream tells perdu;
+* at startup, once perdu has reached docker and, with `--icons-dir` set, found your icons directory ([Deploying perdu](deploy.md#starting));
+* when a container carrying `<prefix>.enable` is created, updated or removed, as docker's event stream tells perdu;
 * when the event stream connects again after it dropped, since the events sent meanwhile are lost;
 * after a listing failed, to try it again;
 * after a refresh ([Refreshes](#refreshes));
@@ -80,9 +80,9 @@ Unless a failure occurs, **builds are always run to completion**: perdu might ge
 
 ### What a build does
 
-1. **Discovery** asks Docker for the containers carrying `<prefix>.enable`, stopped ones included, groups them into services by their identity labels, and picks the containers that define a service ([Labels](labels.md#service-identity)).
-   It is the only phase that reads anything from outside perdu, and it reads only from Docker.
-   When Docker can't be reached, the build fails here, and perdu tries again, with a progressive backoff of up to 30 seconds, while it serves the last pages it built, or, before the first, until the startup window ends ([Deploying perdu](deploy.md#starting)).
+1. **Discovery** asks docker for the containers carrying `<prefix>.enable`, stopped ones included, groups them into services by their identity labels, and picks the containers that define a service ([Labels](labels.md#service-identity)).
+   It is the only phase that reads anything from outside perdu, and it reads only from docker.
+   When docker can't be reached, the build fails here, and perdu tries again, with a progressive backoff of up to 30 seconds, while it serves the last pages it built, or, before the first, until the startup window ends ([Deploying perdu](deploy.md#starting)).
 2. **Configuration** reads each service's labels: it sets aside the entities whose labels it can't use, decides which languages get a page ([Locales](locales.md#which-pages-exist)), and chooses each page's value for each field, its own language's or the one it falls back to ([Locales](locales.md#falling-back)).
    It also collects the audiences your labels declare, which your rules can read ([Per-viewer data](rules.md#writing-an-expression)).
 3. **Rendering** writes each page from the built-in template, checking each value it uses, such as a `url`'s shape or an icon's form, and taking each library icon from the resource cache as the cache holds it at that moment ([From an icon's reference to the page](#from-an-icons-reference-to-the-page)).
@@ -152,7 +152,7 @@ An answer that needs no file and no network is there on the spot, so the build a
 
 **A new answer for an icon the page uses triggers a build**, and so does one arriving for an icon the build in progress used, once that build ends.
 That's how an icon perdu had to read or fetch appears on the build after the one that first used it.
-Answers arriving close together are debounced, as Docker events are ([When a build runs](#when-a-build-runs)), and an answer identical to the one already cached doesn't trigger a build.
+Answers arriving close together are debounced, as docker events are ([When a build runs](#when-a-build-runs)), and an answer identical to the one already cached doesn't trigger a build.
 
 **Answers stay until a refresh.**
 Docker is the only source that tells perdu of its changes: perdu doesn't watch your icons directory ([Icons](icons.md#your-own-icons)), and doesn't ask the CDN again for an icon it holds.
@@ -177,11 +177,11 @@ With `--icons-dir` set, every library icon is read from the directory first, Fon
 
 ## Refreshes
 
-A refresh, which `SIGHUP` triggers ([Deploying perdu](deploy.md#refreshing)), catches up with what perdu can't learn on its own: changes to your icons directory and to upstream icons, and a Docker event stream that has silently stopped delivering.
+A refresh, which `SIGHUP` triggers ([Deploying perdu](deploy.md#refreshing)), catches up with what perdu can't learn on its own: changes to your icons directory and to upstream icons, and a docker event stream that has silently stopped delivering.
 Perdu:
 
 1. cuts short the wait before your icons directory's next check, if startup is still waiting for it;
-2. reopens the Docker event stream;
+2. reopens the docker event stream;
 3. reloads every icon the served pages use, from its source, **forgetting the backoffs that failures had built up**, so that a source you have just fixed is tried at once.
    Each icon keeps its answer until the new one arrives, so a source still down costs nothing;
 4. builds from a fresh listing once the reopened stream connects, as after any reconnection: that build **drops the icons it doesn't use from the cache**.

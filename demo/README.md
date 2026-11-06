@@ -1,13 +1,13 @@
-# perdu's demo
+# Perdu's demo
 
-perdu showing the dashboard of a family's home server: films and music, documents, the house, a few tools, and an administration section, in English, French and German, behind a login.
+Perdu showing the dashboard of a family's home server: films and music, documents, the house, a few tools, and an administration section, in English, French and German, behind a login.
 
 The services are stand-ins, containers that carry the labels and run nothing else, so their links lead to addresses under `home.example`, which never resolve.
 Log out is the one link that works.
 
 ## Running it
 
-It needs Docker with Compose, or podman with podman-compose, and the network: for the images, and for the services' icons, which perdu fetches from jsDelivr.
+It needs Docker with Compose, or Podman with podman-compose, and the network: for the images, and for the services' icons, which perdu fetches from jsDelivr.
 
 From this directory:
 
@@ -15,7 +15,7 @@ From this directory:
 docker compose up -d
 ```
 
-Under podman, name its socket:
+Under Podman, name its socket:
 
 ```sh
 DOCKER_SOCKET="$XDG_RUNTIME_DIR/podman/podman.sock" podman-compose up -d

@@ -248,7 +248,7 @@ Perdu groups containers carrying `<prefix>.enable` by the values of the labels `
 
 * **A service defined only by stopped containers gets one more check.**
   Perdu then looks for a live container with the same identity that carries no `<prefix>.enable` — what a redeploy that removed the service's labels leaves — and if it finds one, leaves the service off the page (with an `INFO` line) so that removing a service's labels removes its tile.
-  Each such service costs an extra Docker call per build.
+  Each such service costs an extra docker call per build.
 
 With `--identity-labels` empty, every container is a service of its own, identified by its container ID, and none of the above applies.
 

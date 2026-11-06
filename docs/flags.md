@@ -42,12 +42,12 @@ The prefix is always `PERDU_`, whatever `--namespace` says.
 
 Where perdu refuses a combination of two flags, it refuses it whichever of the two came from the command line and whichever from a variable.
 
-Docker's own `DOCKER_*` variables set the connection to the Docker API ([Deploying perdu](deploy.md#access-to-the-docker-api)), and `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY` the proxy `di:` icons are fetched through ([Deploying perdu](deploy.md#fetching-icons-through-a-proxy)).
+Docker's own `DOCKER_*` variables set the connection to the docker API ([Deploying perdu](deploy.md#access-to-the-docker-api)), and `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY` the proxy `di:` icons are fetched through ([Deploying perdu](deploy.md#fetching-icons-through-a-proxy)).
 Those variables don't have a corresponding flag; they can only be set through the environment.
 
 ## Reference
 
-### What perdu reads from Docker
+### What perdu reads from docker
 
 #### `--namespace`
 
@@ -71,7 +71,7 @@ The default groups the containers of one compose service, its replicas included,
   A container missing any key listed is never on the page, and perdu logs it at `INFO`.
 * Empty value: the empty list, which makes each container a service of its own, identified by its container ID.
   A compose service scaled to three replicas is then three identical tiles, which move relative to each other whenever a container is recreated.
-* Refused: a key listed twice; a key containing `=`, which Docker's label filter can't express; a key under the namespace, such as `perdu.group`.
+* Refused: a key listed twice; a key containing `=`, which docker's label filter can't express; a key under the namespace, such as `perdu.group`.
   A key containing a comma can't be listed: it arrives as two keys, which no container carries.
 
 ### The pages

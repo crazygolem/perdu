@@ -2,7 +2,7 @@
 
 Perdu is a landing page for self-hosted application stacks.
 
-It reads labels from Docker containers, builds a static page per language listing the discovered services, and serves those pages.
+It reads labels from docker containers, builds a static page per language listing the discovered services, and serves those pages.
 
 A small expression engine lets you send dynamic data alongside the static page, so that scripts can customize the rendered page for each user or request, e.g. hiding services from users depending on their groups.
 
@@ -19,7 +19,7 @@ This manual is for whoever runs perdu: what you need to deploy it, configure it 
 
 | Chapter                                     | What it covers                                                                                                                                        |
 | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Deploying perdu](deploy.md)                | The image, a compose stack, access to the Docker API, the reverse proxy in front of perdu, starting, refreshing and stopping, and non-standard setups |
+| [Deploying perdu](deploy.md)                | The image, a compose stack, access to the docker API, the reverse proxy in front of perdu, starting, refreshing and stopping, and non-standard setups |
 | [Flags and environment variables](flags.md) | Every flag, its environment variable, its default and the values it refuses                                                                           |
 | [Labels](labels.md)                         | Every label, how containers become services, and what happens to a label perdu can't use                                                              |
 | [Locales](locales.md)                       | Which pages exist, translating labels, the language switcher, and how a viewer lands on a page                                                        |
