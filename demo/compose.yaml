@@ -29,6 +29,12 @@ services:
       # The viewer's groups and name, from the headers the front end sets.
       - '--audience-expr=headers["remote-groups"] | split(",")'
       - '--data=name=headers["remote-name"]'
+      # The icon libraries the labels name: perdu ships none, so each is a
+      # remote. di: is dashboard-icons, whose names pick the format, and
+      # fa: is Font Awesome Free, whose names are a style and an icon
+      # (grouped in the pattern) that its tree keeps in directories.
+      - '--icons-remote=di:https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/{format:svg,png,webp}/{name}.{format} retry:403'
+      - '--icons-remote=fa:(?<style>solid|regular|brands)-(?<name>.+) https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7/svgs/{style}/{name}.svg'
     environment:
       DOCKER_HOST: tcp://socket-proxy:2375
     networks:
@@ -66,20 +72,6 @@ services:
       - perdu
     restart: unless-stopped
 
-  # Uncategorized, so it comes first. It links nowhere, being instructions
-  # rather than a place to go, and has no icon, so its initials stand in.
-  grandma:
-    <<: *service
-    labels:
-      perdu-demo.enable: "true"
-      perdu-demo.name.en: "Photos for Grandma"
-      perdu-demo.name.fr: "Photos pour Mamie"
-      perdu-demo.name.de: "Fotos für Oma"
-      perdu-demo.description.en: "No internet? The family photos are also on the white USB stick in the drawer under the TV. Plug it into the side of the TV, press SOURCE on the remote, choose USB, then Photos, and use the arrows to go from one photo to the next. If nothing shows, call Sam."
-      perdu-demo.description.fr: "Pas d'internet ? Les photos de famille sont aussi sur la clé USB blanche, dans le tiroir sous la télé. Branche-la sur le côté de la télé, appuie sur SOURCE sur la télécommande, choisis USB, puis Photos, et passe d'une photo à l'autre avec les flèches. Si rien ne s'affiche, appelle Sam."
-      perdu-demo.description.de: "Kein Internet? Die Familienfotos sind auch auf dem weißen USB-Stick in der Schublade unter dem Fernseher. Steck ihn seitlich in den Fernseher, drück auf der Fernbedienung SOURCE, wähl USB und dann Fotos, und blättere mit den Pfeiltasten von Foto zu Foto. Wenn nichts erscheint, ruf Sam an."
-      perdu-demo.audience: "users"
-
   nextcloud:
     <<: *service
     labels:
@@ -115,6 +107,14 @@ services:
       perdu-demo.icon: "di:paperless-ngx"
       perdu-demo.category: "Documents"
       perdu-demo.audience: "users"
+      perdu-demo.actions.1-documents.name.en: "Documents"
+      perdu-demo.actions.1-documents.name.fr: "Documents"
+      perdu-demo.actions.1-documents.url: "https://paperless.home.example/documents"
+      perdu-demo.actions.1-documents.icon: "fa:solid-file-lines"
+      perdu-demo.actions.2-inbox.name.en: "Inbox"
+      perdu-demo.actions.2-inbox.name.fr: "À trier"
+      perdu-demo.actions.2-inbox.url: "https://paperless.home.example/documents?is_in_inbox=1"
+      perdu-demo.actions.2-inbox.icon: "fa:solid-inbox"
 
   # An icon given by its URL, which the viewer's browser fetches itself.
   bookstack:
@@ -122,12 +122,20 @@ services:
     labels:
       perdu-demo.enable: "true"
       perdu-demo.name: "BookStack"
-      perdu-demo.description.en: "The family's recipes and how-tos"
-      perdu-demo.description.fr: "Les recettes et les modes d'emploi de la famille"
+      perdu-demo.description.en: "The family's know-how"
+      perdu-demo.description.fr: "Le savoir-faire familial"
       perdu-demo.url: "https://wiki.home.example/"
       perdu-demo.icon: "https://cdn.jsdelivr.net/gh/selfhst/icons@main/svg/bookstack-dark.svg"
       perdu-demo.category: "Documents"
       perdu-demo.audience: "users"
+      perdu-demo.actions.1-recipes.name.en: "Recipes"
+      perdu-demo.actions.1-recipes.name.fr: "Recettes"
+      perdu-demo.actions.1-recipes.url: "https://wiki.home.example/books/recipes"
+      perdu-demo.actions.1-recipes.icon: "fa:solid-utensils"
+      perdu-demo.actions.2-how-tos.name.en: "How-tos"
+      perdu-demo.actions.2-how-tos.name.fr: "Modes d'emploi"
+      perdu-demo.actions.2-how-tos.url: "https://wiki.home.example/books/how-tos"
+      perdu-demo.actions.2-how-tos.icon: "fa:solid-screwdriver-wrench"
 
   home-assistant:
     <<: *service
@@ -177,6 +185,17 @@ services:
       perdu-demo.icon: "di:immich"
       perdu-demo.category: "Media"
       perdu-demo.audience: "users"
+      # Grandma's photos: a service of its own, declared beside Immich on its
+      # container. Uncategorized, so it comes first. It links nowhere, being
+      # instructions rather than a place to go, and has no icon, so its
+      # initials stand in.
+      perdu-demo.services.grandma.name.en: "Photos for Grandma"
+      perdu-demo.services.grandma.name.fr: "Photos pour Mamie"
+      perdu-demo.services.grandma.name.de: "Fotos für Oma"
+      perdu-demo.services.grandma.description.en: "No internet? The family photos are also on the white USB stick in the drawer under the TV. Plug it into the side of the TV, press SOURCE on the remote, choose USB, then Photos, and use the arrows to go from one photo to the next. If nothing shows, call Sam."
+      perdu-demo.services.grandma.description.fr: "Pas d'internet ? Les photos de famille sont aussi sur la clé USB blanche, dans le tiroir sous la télé. Branche-la sur le côté de la télé, appuie sur SOURCE sur la télécommande, choisis USB, puis Photos, et passe d'une photo à l'autre avec les flèches. Si rien ne s'affiche, appelle Sam."
+      perdu-demo.services.grandma.description.de: "Kein Internet? Die Familienfotos sind auch auf dem weißen USB-Stick in der Schublade unter dem Fernseher. Steck ihn seitlich in den Fernseher, drück auf der Fernbedienung SOURCE, wähl USB und dann Fotos, und blättere mit den Pfeiltasten von Foto zu Foto. Wenn nichts erscheint, ruf Sam an."
+      perdu-demo.services.grandma.audience: "users"
 
   # In English alone: the French and German pages fall back to it. Among
   # the tools, but for administrators alone: a section places a tile, and

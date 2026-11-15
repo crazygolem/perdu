@@ -22,7 +22,7 @@ Perdu works on three fronts, which meet in the pages:
       a build:  • discovery      ◄── docker: the containers and their labels
                 • configuration
                 • rendering      ◄── resource cache ◄── your icons directory,
-                │                                       Font Awesome, the CDN
+                │                                       your remotes
                 ▼
       bundle: the pages, and the assets and icons they use
                 │
@@ -40,7 +40,7 @@ request │       │ the page                  │ on the response
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | The event stream      | perdu's connection to docker's events: it tells the build coordinator when a container carrying `<prefix>.enable` is created, updated or removed |
 | The build coordinator | decides when a build runs, and runs one at a time                                                                                                |
-| Discovery             | a build's first phase: lists the containers carrying `<prefix>.enable`, and groups them into services                                            |
+| Discovery             | a build's first phase: lists the containers carrying `<prefix>.enable`, gathers them into workloads, and reads which services they declare       |
 | Configuration         | a build's second phase: reads the services' labels into what each page shows                                                                     |
 | Rendering             | a build's third phase: writes each page from the built-in template, taking the icons it needs from the resource cache                            |
 | The resource cache    | holds the icons perdu has loaded from the icon libraries, and loads new ones in the background                                                   |
@@ -80,24 +80,25 @@ Unless a failure occurs, **builds are always run to completion**: perdu might ge
 
 ### What a build does
 
-1. **Discovery** asks docker for the containers carrying `<prefix>.enable`, stopped ones included, groups them into services by their identity labels, and picks the containers that define a service ([Labels](labels.md#service-identity)).
+1. **Discovery** asks docker for the containers carrying `<prefix>.enable`, stopped ones included, gathers them into workloads by their workload labels, and picks the containers that define each workload ([Labels](labels.md#service-identity)).
+   From the keys of those containers' labels, it reads which services and actions each workload declares, and warns about the labels whose key it can't use.
    It is the only phase that reads anything from outside perdu, and it reads only from docker.
    When docker can't be reached, the build fails here, and perdu tries again, with a progressive backoff of up to 30 seconds, while it serves the last pages it built, or, before the first, until the startup window ends ([Deploying perdu](deploy.md#starting)).
-2. **Configuration** reads each service's labels: it sets aside the entities whose labels it can't use, decides which languages get a page ([Locales](locales.md#which-pages-exist)), and chooses each page's value for each field, its own language's or the one it falls back to ([Locales](locales.md#falling-back)).
+2. **Configuration** reads each service's label values, and the locales added to its keys: it sets aside the entities whose labels it can't use, ignores with a `WARN` the locales it can't use, decides which languages get a page ([Locales](locales.md#which-pages-exist)), and chooses each page's value for each field, its own language's or the one it falls back to ([Locales](locales.md#falling-back)).
    It also collects the audiences your labels declare, which your rules can read ([Per-viewer data](rules.md#writing-an-expression)).
 3. **Rendering** writes each page from the built-in template, checking each value it uses, such as a `url`'s shape or an icon's form, and taking each library icon from the resource cache as the cache holds it at that moment ([From an icon's reference to the page](#from-an-icons-reference-to-the-page)).
    Separately, a missing-locale error page is generated for each language perdu has chrome for, used when the viewer requests a locale that has not been otherwise generated and has no appropriate fallback page.
    A failure here is a defect of perdu's, which a retry would only repeat, so perdu doesn't retry on its own: the last pages stay served until a later build, whatever triggers it, succeeds, and before the first page perdu stops instead.
 
 > [!NOTE]
-> **Perdu never blindly lists or reads containers**: it lists those carrying `<prefix>.enable` and those sharing a stopped service's identity; the label's value itself belongs to discovery:
+> **Perdu never blindly lists or reads containers**: it lists those carrying `<prefix>.enable` and those of a workload whose containers are all stopped; the label's value itself belongs to discovery:
 >
 > 1. List the containers that carry `enable`;
-> 2. Group them into services by their identity labels, and pick the containers that define a service — the others are ignored;
-> 3. Read `enable`'s value from those defining containers: unparseable and conflicting values set the service aside;
-> 4. If a service is defined only by stopped containers: make a targeted check for the existence of a live container with the same identity but without the `enable` label: if there is one, the service is ignored.
+> 2. Gather them into workloads by their workload labels, and pick the containers that define each workload — the others are ignored;
+> 3. Read `enable`'s value from those defining containers: unparseable and conflicting values set the workload's services aside;
+> 4. If a workload is defined only by stopped containers: make a targeted check for the existence of a live container of the same workload but without the `enable` label: if there is one, the workload's services are ignored.
 >
-> Perdu reads the other labels only after a service's identity has been established, from the containers that define it ([Labels](labels.md#service-identity)).
+> Perdu reads the other labels only once a workload's defining containers are picked, and from those alone ([Labels](labels.md#service-identity)).
 
 A label perdu can't use costs only the entity or the value carrying it, never the build, and is logged on every build until you fix it ([Labels](labels.md#what-happens-to-a-label-perdu-cant-use)).
 
@@ -118,7 +119,7 @@ An icon comes in one of four forms ([Icons](icons.md#the-forms-an-icon-takes)), 
 Rendering checks a library icon's form, then takes the cache's answer for it, whatever the cache holds at that moment:
 
 * **the icon**: the bundle gets it, and the page links it from `/assets/icons/<library>/<name>.<extension>`;
-* **not found, or refused**: the page draws the default in its place, the service's initials on a plate or an action's bolt, and the build logs a `WARN` ([Icons](icons.md#when-an-icon-is-missing));
+* **not found, or refused**: the page draws the default in its place, the service's initials on a plate or the default action icon, and the build logs a `WARN` ([Icons](icons.md#when-an-icon-is-missing));
 * **no answer yet**, for an icon the cache is still loading or has never held: the page draws the default for now, and the cache loads the icon in the background.
 
 Once the icon has loaded, the cache triggers a build: the icon appears with the following build, usually within a second, so a page loaded in between shows the default.
@@ -129,34 +130,34 @@ In the viewer's browser, the page loads the icon as an image, and a script draws
 
 **The resource cache holds the icons perdu has loaded from its icon libraries**, so that a build never waits for a file or the network, and perdu doesn't read or fetch again an icon it already holds.
 
-Every library icon goes through it, whatever its library: `fa`, `di`, and the libraries you add in your icons directory, the files there overriding `fa`'s and `di`'s icons included, and so does the bolt the page draws for an action without an icon, which is Font Awesome's `fa:solid-bolt`.
-No other form of icon enters it ([From an icon's reference to the page](#from-an-icons-reference-to-the-page)), and neither do the stylesheet, the scripts and the favicon, which are built into perdu.
+Every library icon goes through it, whether it comes from your icons directory or a remote.
+No other form of icon enters it ([From an icon's reference to the page](#from-an-icons-reference-to-the-page)).
+The defaults drawn by the page, the stylesheets, the scripts and the favicon are assets built into perdu and don't enter the cache either.
 
-**It holds one answer per icon**, however many services, pages and languages use it: the icon itself, *not found*, or *refused* with its cause, such as a file over the size limit or a CDN's `403`; or no answer yet, while the icon loads.
+**It holds one answer per icon**, however many services, pages and languages use it: the icon itself, *not found*, or *refused* with its cause, such as a file over the size limit or a remote's `403`; or no answer yet, while the icon loads.
 
 **A build takes what the cache holds, and never waits.**
 The first answer a build gets for an icon stands for the rest of that build, so every page of a build draws an icon the same way.
 An icon the cache doesn't hold yet is loaded in the background, while the build goes on without it.
 
-**Icons load through a pipeline per library**, a chain of sources each tried in turn:
+**Icons load through a pipeline**, a chain of sources each tried in turn, which the flags set at startup:
 
-| Pipeline  | Libraries           | Sources, in order                                     |
-| --------- | ------------------- | ----------------------------------------------------- |
-| `fa`      | `fa`                | your icons directory, then the icons built into perdu |
-| `di`      | `di`                | your icons directory, then jsDelivr's CDN             |
-| `default` | every other library | your icons directory                                  |
+| Pipeline           | Libraries                             | Sources, in order                               |
+| ------------------ | ------------------------------------- | ----------------------------------------------- |
+| the library's name | each library with an `--icons-remote` | your icons directory, then the library's remote |
+| `~default`         | every other library                   | your icons directory                            |
 
 **Your icons directory is in each chain when `--icons-dir` is set** ([Icons](icons.md#your-own-icons)).
 A source that doesn't have the icon passes it on to the next, and after the last one the answer is *not found*.
-An answer that needs no file and no network is there on the spot, so the build asking for it already has it: **without an icons directory**, `fa`'s icons come from the built-in set at once, and the libraries other than `fa` and `di` are *not found* at once.
+An answer that needs no file and no network is there on the spot, so the build asking for it already has it: **without an icons directory**, a library with no remote is *not found* at once, and a name a remote's pattern refuses is refused at once.
 
 **A new answer for an icon the page uses triggers a build**, and so does one arriving for an icon the build in progress used, once that build ends.
 That's how an icon perdu had to read or fetch appears on the build after the one that first used it.
 Answers arriving close together are debounced, as docker events are ([When a build runs](#when-a-build-runs)), and an answer identical to the one already cached doesn't trigger a build.
 
 **Answers stay until a refresh.**
-Docker is the only source that tells perdu of its changes: perdu doesn't watch your icons directory ([Icons](icons.md#your-own-icons)), and doesn't ask the CDN again for an icon it holds.
-So a build doesn't reach out to the CDN for the icons perdu already holds, and isn't slowed when the CDN is.
+Docker is the only source that tells perdu of its changes: perdu doesn't watch your icons directory ([Icons](icons.md#your-own-icons)), and doesn't ask a remote again for an icon it holds.
+So a build doesn't reach out to a remote for the icons perdu already holds, and isn't slowed when a remote is.
 In return, a change to a file or to an icon upstream shows only once a refresh reloads it ([Refreshes](#refreshes)), and so does a fix to an icon perdu found missing or refused: until then, the page shows what perdu holds.
 
 **Icons the page no longer uses are kept until a refresh**, so that a service that goes away for a while finds its icons again when it comes back, without a read or a fetch.
@@ -164,16 +165,21 @@ The first build **after a refresh** clears the icons it doesn't use, and nothing
 The logs give what it holds after each build, and how much of it the page no longer uses ([Reading the logs](logs.md#builds)).
 
 **A failure is not an answer.**
-A source that fails — your icons directory missing or unreadable, a file perdu can't read, the CDN unreachable, too slow, or failing on its side — leaves the icon's answer as it was, and perdu tries again later, with a progressive backoff of up to 30 seconds for your icons directory, and 10 minutes for the CDN.
+A source that fails — your icons directory missing or unreadable, a file perdu can't read, a remote's host unreachable, too slow, or failing on its side — leaves the icon's answer as it was, and perdu tries again later, with a progressive backoff of up to 30 seconds for your icons directory, and 10 minutes for a remote's host.
 The backoffs are kept per source, so an outage costs about one attempt per wait rather than one per icon, and per icon, so one broken icon doesn't slow down the others.
-An outage is logged when it starts and when it ends, rather than on every attempt ([Reading the logs](logs.md#icons)).
+**A source is your icons directory, or a host a remote names**, whatever its port, so remotes on one host share its backoff, as the collections jsDelivr serves do, and an icon's own backoff starts again when it moves on to its remote's next URL or format.
+**A host asking perdu to slow down**, with a `429` or a `503`, gets no request until the wait its `Retry-After` asks for has passed, up to 10 minutes, or, with none or one asking for no wait, until its backoff has.
+An outage is logged when it starts and when it ends, once per host or once for your icons directory, rather than on every attempt ([Reading the logs](logs.md#icons)).
 **Perdu never gives up on an icon**: one whose source is down stays without an answer until the source recovers, while the icons already loaded keep showing.
 
-**A pipeline works through its icons one at a time at each source**, from a queue per source: `fa`, `di` and `default` each read your icons directory through a queue of their own, the `default` one serving every library you add.
-So a read that hangs holds every icon queued behind it in that pipeline, and a directory that stops answering, as a network share does when its server hangs, holds icons in all three ([Icons](icons.md#your-own-icons)).
+**Your icons directory is read one icon at a time per library**, from a queue per library whichever pipeline asks, the libraries' reads going on side by side, at most 8 at once.
+So a read that hangs holds only the icons of its own library, while the others go on, until 8 libraries' reads hang; a directory that stops answering at its root, as a network share does when its server hangs, holds every library's ([Icons](icons.md#your-own-icons)).
+
+**Each library's remote fetches its icons one at a time**, one request per URL and format, multiple remotes fetching in parallel (a request can't hang as a read can: one that doesn't complete within 5 seconds fails and is retried).
+So a host that stops answering holds back only the icons waiting at one of its URLs: once a request to it has failed, the remote goes on with its icons at a URL on another host, and the other libraries' remotes go on unaffected, unless they target that host too.
 
 **A restart starts with an empty cache**, which lives in memory: every icon is loaded again.
-With `--icons-dir` set, every library icon is read from the directory first, Font Awesome's included, so the first page after a restart shows none of them, not even the bolt, and the build after it does.
+Every library icon is read from your icons directory or fetched from its remote again, so the first page after a restart shows none of them, and the build after it does; built-in assets, such as the default action icon, show from the first.
 
 ## Refreshes
 
@@ -182,7 +188,7 @@ Perdu:
 
 1. cuts short the wait before your icons directory's next check, if startup is still waiting for it;
 2. reopens the docker event stream;
-3. reloads every icon the served pages use, from its source, **forgetting the backoffs that failures had built up**, so that a source you have just fixed is tried at once.
+3. reloads every icon the served pages use, from its source, **forgetting the backoffs that failures had built up and the waits hosts asked for**, so that a source you have just fixed is tried at once.
    Each icon keeps its answer until the new one arrives, so a source still down costs nothing;
 4. builds from a fresh listing once the reopened stream connects, as after any reconnection: that build **drops the icons it doesn't use from the cache**.
 

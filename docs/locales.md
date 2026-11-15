@@ -153,7 +153,8 @@ The worst a hostile link can do is show a viewer another of your pages, which th
 > You can link a new user to `/set-lang/fr` instead of `/l/fr/` to set their language, for example in an onboarding email, and an identity provider that knows a user's language can redirect them through it.
 
 `/set-lang/` accepts any spelling of a locale, `/set-lang/FR`, or `/set-lang/iw` for `he`, and **stores any locale that can have a page, whether or not one exists**: a viewer following `/set-lang/fr-CH` while only a `fr` page exists stores `fr-CH` and reads the `fr` page, through `/l/fr-ch/` ([A locale with no page](#a-locale-with-no-page)), then lands on the `fr-CH` page from `/` once one exists.
-A value no page can have — a malformed tag, one naming no language such as `und`, or one carrying an extension — stores nothing, and gets an error page saying there is no page in the default locale's language.
+A value no page can have — a malformed tag, one naming no language such as `und`, or one carrying an extension — stores nothing, and gets the [missing-locale error page](#a-locale-with-no-page) in the language it would have on `/l/`.
+A segment outside the characters a locale tag is written with gets the server's plain `404` rather than the error page.
 
 A cookie is only ever set by a navigation: an icon pointing at `/set-lang/fr` sets nothing, and a browser prefetching the link sets nothing until the viewer actually follows it.
 To drive the language from your identity provider on every page instead, see [A rule named `lang`](rules.md#a-rule-named-lang).

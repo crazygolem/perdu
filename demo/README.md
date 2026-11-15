@@ -48,9 +48,10 @@ Log out goes back to the login page.
   Forgejo is described in English alone.
 * **Grandma's photos** link nowhere, so the tile is dimmed, and their description is too long for the tile: hover over it, focus it with the keyboard, or click it to read it whole.
   Without an icon, the tile shows a plate with its initials.
-* **Nextcloud's actions** are listed in its tile.
+  The tile is declared on Immich's container, beside Immich's own labels.
+* **The actions** of Nextcloud, Paperless-ngx and BookStack are listed in their tiles.
   authentik's actions, Change password and Log out, are placed in a section authentik isn't in, so each gets a tile of its own there, with authentik's name as its second line, and is shown to the viewers its own `audience` names: Change password to users, Log out to everyone.
 * **The administration section** comes last, shown to Alex alone.
   So is Forgejo, though it stays among the tools: a section places a tile, and its `audience` alone says who sees it.
-* **The icons** come from dashboard-icons, which perdu fetches and serves itself, but for Navidrome's and BookStack's, given as URLs of selfh.st's icons, which the viewer's browser fetches.
+* **The icons** come from dashboard-icons and Font Awesome Free, which perdu fetches and serves itself, through the two `--icons-remote` flags in `compose.yaml`, but for Navidrome's and BookStack's, given as URLs of selfh.st's icons, which the viewer's browser fetches.
 * **Your system's settings**: the page follows its dark or light scheme, more contrast, forced colours and reduced motion.

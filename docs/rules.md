@@ -223,7 +223,8 @@ Each rule is compiled once, at startup, and perdu refuses to start, naming the r
 
 * doesn't compile — a misspelled map name such as `header` included;
 * writes out a name its map can never hold ([Ways a rule can surprise its author](#ways-a-rule-can-surprise-its-author)), in any branch, even one no request takes;
-* uses `oversized` other than by testing a name in one of its three sets.
+* uses `oversized` other than by testing a name in one of its three sets;
+* uses `$env`, the name the expression language gives the whole environment: through it a rule reaches a map or tests `oversized` without naming it, so neither refusal above could hold for it.
 
 A rule that compiles is never refused for the type of value it returns, even where that type is known at startup: a result of a type the tables above refuse is a failure on each request it happens on, logged then.
 

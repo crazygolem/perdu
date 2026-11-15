@@ -34,7 +34,8 @@ docker run --rm -p 127.0.0.1:8080:8080 \
     --group-add "$(stat -c %g /var/run/docker.sock)" \
     ghcr.io/crazygolem/perdu:latest \
         --default-locale=en \
-        --identity-labels=''
+        --workload-labels='' \
+        --icons-remote='si:https://cdn.jsdelivr.net/npm/simple-icons@v16/icons/{name}.svg'
 ```
 
 Then open <http://localhost:8080/>, which lists the containers carrying perdu's [labels](docs/labels.md): none until you add some.
@@ -46,13 +47,14 @@ docker run -d --name perdu-example --network none \
     --label perdu.name=Example \
     --label perdu.description='An idle container, labelled for perdu' \
     --label perdu.url=https://example.com/ \
-    --label perdu.icon=di:docker \
+    --label perdu.icon=si:docker \
     docker.io/alpine:3.24 tail -f /dev/null
 ```
 
 Reload the page to see its tile, and remove it with `docker rm -f perdu-example`.
 
-By default, perdu expects to run in a compose stack; the `--identity-labels=''` option makes perdu read its labels from each container individually instead.
+By default, perdu expects to run in a compose stack; the `--workload-labels=''` option makes perdu read its labels from each container individually instead.
+Perdu ships no icon library: the `--icons-remote` option fetches the example's `si:` icon from [Simple Icons](docs/icons.md#simple-icons).
 
 > [!NOTE]
 > Mounting the socket is root-equivalent on the host, which suits a try but not a deployment: [Deploying perdu](docs/deploy.md) has a compose stack snippet reaching the docker API through a socket proxy, and describes what the reverse proxy in front of perdu must do.

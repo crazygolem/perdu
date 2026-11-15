@@ -3,7 +3,7 @@
 Perdu renders its pages with a built-in template.
 In this release, the template can't be replaced and its look can't be changed.
 
-The page's styles sit in three cascade layers of perdu's, declared before any other stylesheet: `perdu-held`, the few rules the page's features rest on, such as the one hiding a tile from a viewer, the bolt of an action without an icon and the spacing of a plate's letters; then `perdu-defaults`, what each part needs to read as itself where no stylesheet styles it; then `perdu-theme`, the built-in stylesheet.
+The page's styles sit in three cascade layers of perdu's, declared before any other stylesheet: `perdu-held`, the few rules the page's features rest on, such as the one hiding a tile from a viewer, the default *action* icon and the spacing of a plate's letters; then `perdu-defaults`, what each part needs to read as itself where no stylesheet styles it; then `perdu-theme`, the built-in stylesheet.
 So a stylesheet a page gains — a browser extension's, for instance — overrides the defaults and the theme with any of its rules, whatever their specificity, in a layer of its own or in none, while the rules of `perdu-held` hold against it, `!important` or not: only a viewer's own `!important` rules override those.
 
 This chapter describes the template's features, and how they behave for a viewer.
@@ -26,7 +26,8 @@ When no tile is visible at all, because nothing was discovered or everything is 
 
 A tile links to its entity's `url`, which opens in the same tab.
 
-A tile without a usable [`url`](labels.md#url) links nowhere, and is drawn dimmed so that viewers can tell it apart from the tiles they can follow.
+A service without a usable [`url`](labels.md#url) is drawn dimmed, so that viewers can tell it apart from the tiles they can follow.
+Only a service's tile can link nowhere: an action without a usable `url` is not shown ([Actions](#actions)).
 
 ### The second line
 
@@ -50,12 +51,16 @@ Service and action names are never ellipsized.
 
 A service's actions are listed in its tile, in the order of their keys ([Labels](labels.md#actions)).
 
-An action placed in a section its service isn't in gets a tile of its own, with its service's name as its second line; screen readers introduce that name with "Provided by:".
+An action placed in a section its service isn't in gets a tile of its own, with its service's name as its second line, after the *provided-by* icon ([Icons](#icons)); screen readers introduce that name with "Provided by:".
+
+An action without a usable [`url`](labels.md#url) isn't shown — neither nested nor on a tile of its own.
+Perdu logs a `WARN` for a `url` it can't use, but nothing is logged for an action whose `url` is missing or empty.
 
 ### Icons
 
 Services with a missing icon get a plate holding the service's initials, in a colour and a shape kept for as long as the labels identifying the service stay the same ([Icons](icons.md#how-the-page-draws-icons)).
-An action without an icon shows a bolt.
+An action without an icon shows the default *action* icon, a bolt.
+An action's own tile shows the *provided-by* icon, the bolt's outline, before its service's name, so that the line doesn't read as an action of its own.
 
 Monochrome icons are tinted in the page's text colour.
 
@@ -99,8 +104,8 @@ The developer tools of Firefox and Chromium-based browsers can also emulate `pre
 
 The template also follows these settings:
 
-* **Forced colours**, as set by a Windows contrast theme or a browser overriding page colours: the page takes the system's colours, and links its link colour.
-* **More contrast** (`prefers-contrast: more`): dimmed text, lines and the accent colour take the full text colour, and so do the initials' plates.
+* **Forced colours**, as set by a Windows contrast theme or a browser overriding page colours: the page takes the system's colours, links its link colour, and the *link-off* icon, a chain link with a slash through it, marks a tile that links nowhere.
+* **More contrast** (`prefers-contrast: more`): dimmed text, lines and the accent colour take the full text colour, and so do the initials' plates; a tile that links nowhere keeps its icon whole, a plate taking a dashed border, and the *link-off* icon marks it.
 * **Reduced motion**: nothing on the page moves, and hover and focus take effect at once.
 * **Text size**: every size follows the browser's default text size.
 
@@ -147,9 +152,9 @@ Without JavaScript:
 A `Content-Security-Policy` your proxy adds removes the parts of the page that depend on what it refuses ([Deploying perdu](deploy.md#content-security-policy)):
 
 * **Refusing inline scripts** gives the page [without JavaScript](#without-javascript).
-* **Refusing inline styles** makes filtering fail open and changes how parts of the page are drawn: every viewer sees every tile, the empty page's fallback message shows on a page that has tiles, the bolt is missing, and every icon shows in its own colours.
+* **Refusing inline styles** makes filtering fail open and changes how parts of the page are drawn: every viewer sees every tile, the empty page's fallback message shows on a page that has tiles, the default *action* icon, the *provided-by* icon and the *link-off* icon are missing, and every icon shows in its own colours.
   Also, a failed icon shows what the browser draws for a broken image, the language dropdown opens in its default position, a plate's letters follow a viewer's text-spacing override, and in Firefox, under forced colours, links show in the text colour.
-* **Refusing `data:` images** removes the bolt.
+* **Refusing `data:` images** removes the default *action* icon and the *provided-by* icon.
 
 ## The missing-locale error page
 

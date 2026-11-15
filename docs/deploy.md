@@ -15,15 +15,15 @@ Run `perdu -h` for a summary.
 Pull the image from GitHub's container registry:
 
 ```sh
-docker pull ghcr.io/crazygolem/perdu:0.1
+docker pull ghcr.io/crazygolem/perdu:0.2
 ```
 
-Each release's image is tagged with its version, such as `0.1.0`; a final release's also moves its minor line's tag, `0.1`, and `latest`, which a pre-release never moves.
+Each release's image is tagged with its version, such as `0.2.0`; a final release's also moves its minor line's tag, `0.2`, and `latest`, which a pre-release never moves.
 Until perdu's 1.0, a minor release may break your setup: follow a minor line's tag, and read the release notes before moving to the next.
 The image is built for `linux/amd64` and `linux/arm64`.
 
 The image runs the `perdu` binary as its entry point, as an unprivileged user.
-The image also holds the CA certificates that fetching `di:` icons needs, and the licences of what it ships, in `/licenses/`.
+The image also holds the CA certificates that fetching icons from an `https` remote needs, and the licences of what it ships, in `/licenses/`.
 
 ## Compose stack example
 
@@ -32,11 +32,14 @@ The following snippet shows a stack where perdu reaches the docker API through a
 ```yaml
 services:
   perdu:
-    image: ghcr.io/crazygolem/perdu:0.1
+    image: ghcr.io/crazygolem/perdu:0.2
     command:
       - --default-locale=en
       - '--audience-expr=headers["remote-groups"] | split(",")'
       - '--data=name=headers["remote-name"]'
+      # The si: library jellyfin's icon uses, from Simple Icons:
+      # perdu ships no icon library.
+      - '--icons-remote=si:https://cdn.jsdelivr.net/npm/simple-icons@v16/icons/{name}.svg'
     environment:
       DOCKER_HOST: tcp://socket-proxy:2375
     networks:
@@ -66,7 +69,7 @@ services:
       perdu.name: Jellyfin
       perdu.description: Films and series
       perdu.url: https://jellyfin.example.com
-      perdu.icon: di:jellyfin
+      perdu.icon: si:jellyfin
       perdu.category: Media
 
 networks:
@@ -80,7 +83,7 @@ networks:
 
 Your reverse proxy joins the `default` network and sends perdu's traffic to `perdu:8080`, adding the `Remote-Groups` and `Remote-Name` headers the two expressions read ([The reverse proxy](#the-reverse-proxy)).
 
-[Labels](labels.md) describes every label, and [Per-viewer data](rules.md) the expressions.
+[Labels](labels.md) describes every label, [Per-viewer data](rules.md) the expressions, and [Icons](icons.md#simple-icons) the `si:` remote.
 
 > [!TIP]
 > In `command:`, write each flag as one item with its value after `=`, and quote every item that holds an expression.
@@ -98,7 +101,7 @@ These are the calls it makes, so that you can open a proxy to them alone, each p
 | Call                   | What it reads                                                                                                                                                                                                                   |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `HEAD /_ping`          | the API version the daemon speaks, before the first call, unless `DOCKER_API_VERSION` gives one                                                                                                                                 |
-| `GET /containers/json` | the containers, stopped ones included, filtered by label: those carrying `<prefix>.enable`, and those sharing the identity of a service whose containers are all stopped ([How perdu works](how-it-works.md#what-a-build-does)) |
+| `GET /containers/json` | the containers, stopped ones included, filtered by label: those carrying `<prefix>.enable`, and those of a workload whose containers are all stopped ([How perdu works](how-it-works.md#what-a-build-does))                     |
 | `GET /events`          | the event stream: the containers carrying `<prefix>.enable` being created, updated or removed                                                                                                                                   |
 
 Each call has 5 seconds to answer, the event stream's headers included; a call that doesn't fails like any other failure, and perdu retries it ([Starting](#starting)).
@@ -283,7 +286,7 @@ Perdu uses cookies for presentational purposes, not for access control, but you 
 
 ## Fetching icons through a proxy
 
-Perdu fetches `di:` icons from jsDelivr's CDN ([Icons](icons.md#di-dashboard-icons)), and those fetches honour the standard proxy variables, `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY`, in upper or lower case.
+Perdu fetches a library's icons from the URLs its remote names ([Icons](icons.md#remotes)), and those fetches honour the standard proxy variables, `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY`, in upper or lower case.
 
 Nothing else perdu sends goes through them, including the docker API connection.
 
@@ -317,7 +320,7 @@ docker compose kill -s HUP perdu
 ```
 
 A refresh reloads every icon the page uses, reopens the docker event stream, and builds the page again from a fresh listing ([How perdu works](how-it-works.md#refreshes)): it is how a change to the files in `--icons-dir` takes effect.
-Use it after changing your icons, after a `di:` icon changed upstream, or when the page seems to have stopped following your containers.
+Use it after changing your icons, after an icon changed upstream at a remote, or when the page seems to have stopped following your containers.
 
 The signal has to reach perdu's own process.
 The image runs perdu directly, so it does; an image of your own whose entry point is a shell script has to forward the signal or `exec` perdu, or run an init such as `tini`, or the refresh silently never happens.
@@ -332,7 +335,7 @@ Flags are read only at startup: changing one takes a restart.
 | Which of a service's containers run, where they declare different labels | on the next build, since starting or stopping a container triggers none ([Labels](labels.md#service-identity))          |
 | A flag                                                                   | after a restart                                                                                                         |
 | A file in `--icons-dir`                                                  | after a refresh, or for an icon no page has used yet, on the build after the one that first uses it ([Icons](icons.md)) |
-| A `di:` icon upstream                                                    | after a refresh                                                                                                         |
+| A remote's icon, changed upstream                                        | after a refresh                                                                                                         |
 
 [How perdu works](how-it-works.md) explains why each change shows when it does.
 
@@ -366,7 +369,7 @@ Perdu runs the same as a plain binary, extracted from the image or [built from i
 * **Listening**: perdu listens on every address of the machine by default; for local uses or behind a proxy on the same machine, `--listen localhost:8080` keeps it off the network.
 * **The docker API**: without `DOCKER_HOST`, perdu uses the daemon's socket, `/var/run/docker.sock`, as Docker's client does, so the user running perdu needs access to it, which is root-equivalent ([Access to the docker API](#access-to-the-docker-api)); `DOCKER_HOST` can point it at a socket proxy instead.
 * **Refreshing**: `SIGHUP` goes to perdu's own process, e.g. `kill -HUP <pid>` ([Refreshing](#refreshing)).
-* **CA certificates**, for `di:` icons, are the system's.
+* **CA certificates**, for `https` remotes, are the system's.
 
 ### Built from the sources
 

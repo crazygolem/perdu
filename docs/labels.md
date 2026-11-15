@@ -6,7 +6,7 @@ Every label perdu reads starts with the namespace, `perdu` by default and config
 
 ## Declaring a service
 
-A container is on the page when it carries `<prefix>.enable=true` and a service name:
+A container puts a service on the page when it carries `<prefix>.enable=true` and a service name:
 
 ```yaml
 services:
@@ -21,27 +21,39 @@ services:
 **Perdu lists only the containers carrying `<prefix>.enable`**, so that label has to be spelled exactly: a container whose `enable` label is mistyped is left off the page without a warning, while every other mistyped label under the prefix is warned about.
 Perdu also lists stopped containers, so a stopped service stays on the page ([Service identity](#service-identity)).
 
+A container can declare several services, each a tile of its own ([Several services on one container](#several-services-on-one-container)).
+
 ## The labels
 
-| Label                             | Required        | Localizable | Holds                                                                |
-| --------------------------------- | --------------- | ----------- | -------------------------------------------------------------------- |
-| `<prefix>.enable`                 | yes             | no          | whether perdu reads the container's labels: `true` or `false`        |
-| `<prefix>.name`                   | yes             |             | the service's name                                                   |
-| `<prefix>.description`            |                 |             | the tile's second line                                               |
-| `<prefix>.url`                    |                 |             | where the tile links                                                 |
-| `<prefix>.icon`                   |                 |             | the tile's icon ([Icons](icons.md))                                  |
-| `<prefix>.category`               |                 | no          | the sections the tile is in, comma-separated                         |
-| `<prefix>.audience`               |                 | no          | the groups the tile is shown to, comma-separated; empty is everybody |
-| `<prefix>.actions.<key>.name`     | for each action |             | an action's name                                                     |
-| `<prefix>.actions.<key>.icon`     |                 |             | an action's icon                                                     |
-| `<prefix>.actions.<key>.url`      |                 |             | where an action links                                                |
-| `<prefix>.actions.<key>.category` |                 | no          | an action's sections; if empty, takes the service's                  |
-| `<prefix>.actions.<key>.audience` |                 | no          | the groups an action is shown to; never falls back to the service's  |
+| Label                       | Required | Localizable | Holds                                                                |
+| --------------------------- | -------- | ----------- | -------------------------------------------------------------------- |
+| `<prefix>.enable`           | yes      | no          | whether perdu reads the container's labels: `true` or `false`        |
+| `<prefix>.services.<key>.*` |          |             | service labels                                                       |
+| `<prefix>.*`                |          |             | service labels of the anonymous service                              |
+| **Service labels**          |          |             |                                                                      |
+| `name`                      | yes      |             | the service's name                                                   |
+| `description`               |          |             | the tile's second line                                               |
+| `url`                       |          |             | where the tile links                                                 |
+| `icon`                      |          |             | the tile's icon ([Icons](icons.md))                                  |
+| `category`                  |          | no          | the sections the tile is in, comma-separated                         |
+| `audience`                  |          | no          | the groups the tile is shown to, comma-separated; empty is everybody |
+| `actions.<key>.*`           |          |             | action labels                                                        |
+| **Action labels**           |          |             |                                                                      |
+| `name`                      | yes      |             | an action's name                                                     |
+| `icon`                      |          |             | an action's icon                                                     |
+| `url`                       |          |             | where an action links                                                |
+| `category`                  |          | no          | an action's sections; if empty, takes the service's                  |
+| `audience`                  |          | no          | the groups an action is shown to; never falls back to the service's  |
 
-A service and each of its actions are **entities**: each is declared by its labels, shown on its own, and set aside on its own when a label of its own can't be used ([What happens to a label perdu can't use](#what-happens-to-a-label-perdu-cant-use)).
+A service and each of its actions are **entities**: each is declared by its labels, shown on its own, and set aside on its own when one of its labels can't be used ([What happens to a label perdu can't use](#what-happens-to-a-label-perdu-cant-use)).
 An action has no description.
 
 A service's `name`, `description`, `url` and `icon`, and an action's `name`, `url` and `icon`, can be given per language by adding a locale to the key, as in `<prefix>.name.fr=Fou` ([Locales](locales.md#translating-labels)); `enable`, `category` and `audience` can't.
+
+A container can declare several independent services, each with its own actions and its own tile, by keying the labels that belong to one service under one key: `<prefix>.services.<key>` ([Several services on one container](#several-services-on-one-container)).
+Service labels can appear outside the `services` block and define the anonymous service.
+
+A `<key>` must match `[a-zA-Z0-9_-]+`, for both service and action keys: a label whose key holds anything else (including an empty one) is ignored with a `WARN` and declares nothing.
 
 ## How a value is read
 
@@ -61,15 +73,15 @@ There is no way to escape a comma, so an element can't hold one.
 An empty list, `<prefix>.audience=` or `<prefix>.category=`, declares nothing, as leaving the label out does.
 
 **A key is matched exactly as written**, its locale apart: `<prefix>.Name` is not `<prefix>.name`, and `<prefix>.actions.Foo.name` and `<prefix>.actions.foo.name` are two actions.
-A misspelled key is ignored with a `WARN` naming it, and its service may then be set aside for the label it misses, with a second `WARN`.
+A misspelled key is ignored with a `WARN` naming it, and the service or action it names may then be set aside for the label it misses, with a second `WARN`.
 
 ### `enable`
 
-`<prefix>.enable` says whether perdu reads the container's other labels at all, and declares nothing by itself: a container carrying only `enable` puts nothing on the page.
+`<prefix>.enable` says whether perdu reads the container's other perdu labels at all, whichever service they declare, and declares nothing by itself: a container carrying only `enable` puts nothing on the page.
 It takes `true` or `false`, and the other spellings Go reads as booleans: `1`, `t`, `T`, `TRUE`, `True`, and `0`, `f`, `F`, `FALSE`, `False`.
 
 * `false` switches the container off without removing its labels, silently.
-* **An empty value is refused**, as is anything outside that set, and sets the service aside with a `WARN`: writing the bare key, as in `labels: ["perdu.enable"]`, could mean on or off, so perdu asks you to write which.
+* **An empty value is refused**, as is anything outside that set, and sets the container's services aside with a `WARN`: writing the bare key, as in `labels: ["perdu.enable"]`, could mean on or off, so perdu asks you to write which.
 * `enable` never takes a locale; `<prefix>.enable.fr` is ignored with a `WARN`.
 
 ### `name`
@@ -85,7 +97,7 @@ Without one, the tile shows its URL there.
 ### `url`
 
 Where a tile or an action links.
-Without a usable one, it links nowhere, and the page shows it dimmed ([The template](template.md#links)).
+Without a usable one, a service's tile links nowhere and the page shows it dimmed, while an action isn't shown at all ([The template](template.md#links)).
 
 Perdu accepts two forms:
 
@@ -95,7 +107,7 @@ Perdu accepts two forms:
 * **a root-relative path**, with no scheme or host, beginning with `/` and holding no backslash: `/plex/`, for a service served on a path of the same host as perdu.
 
 Anything else is **unusable**: another scheme, a path not beginning with `/` such as `plex`, which would resolve against the page's own address `/l/en/`, or a value perdu can't parse.
-An unusable value isn't an error: its tile stays, linking nowhere, and a `WARN` naming the label says why on every build until you fix it.
+An unusable value isn't an error: a service's tile stays, linking nowhere, an action is left off the page, and a `WARN` naming the label says why on every build until you fix it.
 
 **Perdu parses a URL more strictly than a browser**, so a URL your browser follows can still be unusable here.
 These are the spellings it refuses, and the forms that work:
@@ -109,7 +121,7 @@ These are the spellings it refuses, and the forms that work:
 | a port that isn't a number: `https://example.com:port/`                                   | the port's number                            |
 | an IPv6 host missing its `]`: `https://[::1/`                                             | `https://[::1]/`                             |
 | `https:example.com`, which names no host                                                  | `https://example.com`                        |
-| `//host/path`, which names a host in a root-relative form                                 | `https://host/path`                          |
+| a value beginning with `//`: `//host/path`, `///host`                                     | `https://host/path`                          |
 | a backslash in a root-relative path: `/a\b`                                               | `/a/b`                                       |
 
 A `%` in the query, after `?`, is taken as written.
@@ -184,7 +196,7 @@ Each build then logs an `INFO` line naming the entities that declare one, since 
 
 ### Actions
 
-An action is a link a service offers beside its own, such as a settings page or a "Request access" form, declared under `<prefix>.actions.<key>`:
+An action is a link a service offers beside its own, such as a settings page or a "Request access" form, declared among its service's labels under `actions.<key>` ([The labels](#the-labels)), here on the anonymous service:
 
 ```
 perdu.actions.password.name=Change password
@@ -192,8 +204,7 @@ perdu.actions.password.url=https://auth.example.com/password
 perdu.actions.password.icon=fa:solid-key
 ```
 
-**The key** identifies the action among its service's, and is never shown.
-It must match `[a-zA-Z0-9_-]+`, and an action whose key holds anything else is set aside with a `WARN`, leaving its service in place.
+**The key** identifies the action among its service's, is never shown, and takes the characters every key does ([The labels](#the-labels)).
 A service's actions show in the code-point order of their keys: digits before capitals before lower case.
 
 > [!TIP]
@@ -220,46 +231,71 @@ Nested, it is hidden whenever its service is, whatever it declares, since it is 
 > perdu.actions.access.category=Tools
 > ```
 
+## Several services on one container
+
+A container's labels can declare several services, each a tile of its own: a container providing several functions gets a tile for each.
+
+```yaml
+services:
+  immich:
+    image: ghcr.io/immich-app/immich-server
+    labels:
+      perdu.enable: "true"
+      perdu.name: Immich
+      perdu.url: https://photos.example.com
+      perdu.services.grandma.name: Photos for Grandma
+      perdu.services.grandma.description: No internet? The photos are also on the USB stick in the drawer under the TV.
+```
+
+**The services of one container are independent**: each declares its own labels and takes none from another, the anonymous service's included, and each is set aside on its own, never due to another service of the container.
+Only `<prefix>.enable` is shared, as the container's switch for all of them.
+
+**The anonymous service exists only where a label outside every block does**: a container carrying only `<prefix>.services.<key>` blocks doesn't declare it.
+Adding a block to a container changes nothing for the services already on it, including those its image declares ([Labels an image declares](#labels-an-image-declares)).
+
+Unlike for actions, the service's key is not used to sort entities; it is used to identify a service in logs ([Reading the logs](logs.md#what-a-line-names)) and as a source of deterministic pseudorandomness for the service's tile.
+
 ## Service identity
 
-Several containers can declare the same service: most often the replicas of a scaled compose service.
+Several containers can declare the same services: most often the replicas of a scaled compose service.
 
-Perdu groups containers carrying `<prefix>.enable` by the values of the labels `--identity-labels` lists, by default Compose's project and service labels, so a compose service is one service however many containers it runs ([How perdu works](how-it-works.md#what-a-build-does)).
+Perdu gathers the containers carrying `<prefix>.enable` into **workloads** by the values of the labels `--workload-labels` lists, by default Compose's project and service labels, so a compose service is one workload however many containers it runs, and its labels declare its (perdu) services ([How perdu works](how-it-works.md#what-a-build-does)).
+**A service is identified by its workload and its key**, the anonymous service's being empty, and an action by its service and its own key.
 
-* **A container missing any of those identity labels is never on the page**, and unless its own `enable` is `false`, perdu logs an `INFO` line naming it and the labels it lacks.
+* **A container missing any of those workload labels is never on the page**, and unless its own `enable` is `false`, perdu logs an `INFO` line naming it and the labels it lacks.
   A container you start with `docker run -l perdu.enable=true`, outside Compose, lacks the Compose labels the default lists.
-* **A service's containers rank by state**: running first, then unavailable, then stopped, and only those of the highest rank present define it.
-  So a stale stopped container can't hide the one running, and a replacement restarting in a loop leaves the running container's labels on the page; when none is live (running or unavailable), the stopped ones define the service and it stays on the page.
+* **A workload's containers rank by state**: running first, then unavailable, then stopped, and only those of the highest rank present define it, and with it every service it declares.
+  So a stale stopped container can't hide the one running, and a replacement restarting in a loop leaves the running container's labels on the page; when none is live (running or unavailable), the stopped ones define the workload and its services stay on the page.
 
   In order to limit the staleness of the information displayed on a page and avoid flicker, the ranks have different rules for picking the defining containers:
 
-  | Rank | State                                               | Defines a service    |
+  | Rank | State                                               | Defines a workload   |
   | ---- | --------------------------------------------------- | -------------------- |
   | 1    | `running`                                           | The oldest container |
   | 2    | unavailable: `paused`, `restarting`                 | The oldest container |
   | 3    | stopped: `created`, `exited`, `dead`, being removed | The newest container |
 
-  If there is a tie, i.e. several oldest or newest containers created in the same second, conflicting labels set the service aside with a `WARN` naming them, unless they all set `enable` to `false` (whatever else they declare): the service is then off, as one container switching it off would leave it.
-  Otherwise, perdu names the containers of that rank whose labels differ from those defining the service: at `INFO` while the service is on the page, or where a newer live container would switch on a service that is off, so that a service you just enabled or fixed says why it doesn't show yet; at `DEBUG` otherwise, for a service left off whatever the container declares.
+  If there is a tie, i.e. several oldest or newest containers created in the same second, conflicting labels set the workload's services aside with a `WARN` naming them, unless they all set `enable` to `false` (whatever else they declare): the workload is then off, as one container switching it off would leave it.
+  Otherwise, perdu names the containers of that rank whose labels differ from those defining the workload: at `INFO` while its services are on the page, or where a newer live container would switch on a workload that is off, so that a service you just enabled or fixed says why it doesn't show yet; at `DEBUG` otherwise, for a workload left off whatever the container declares.
 
-  During a redeploy, the new live container waits for the old one to stop (it counts as running until its process exits); a new container still ignored after that differs from another live container of its service, older than itself.
+  During a redeploy, the new live container waits for the old one to stop (it counts as running until its process exits); a new container still ignored after that differs from another live container of its workload, older than itself.
   The older one may be a one-off container run from the service's definition before the redeploy (such as one `docker compose run` starts), which keeps the old labels on the page while it runs; otherwise, the difference is a mistake worth fixing.
-  Once the service has stopped, the container ignored is an older one left behind, which you can remove.
+  Once the workload has stopped, the container ignored is an older one left behind, which you can remove.
 
-* **A service defined only by stopped containers gets one more check.**
-  Perdu then looks for a live container with the same identity that carries no `<prefix>.enable` — what a redeploy that removed the service's labels leaves — and if it finds one, leaves the service off the page (with an `INFO` line) so that removing a service's labels removes its tile.
-  Each such service costs an extra docker call per build.
+* **A workload defined only by stopped containers gets one more check.**
+  Perdu then looks for a live container of the same workload that carries no `<prefix>.enable` — what a redeploy that removed the labels leaves — and if it finds one, leaves the workload's services off the page (with an `INFO` line) so that removing a container's labels removes its tiles.
+  Each such workload costs an extra docker call per build.
 
-With `--identity-labels` empty, every container is a service of its own, identified by its container ID, and none of the above applies.
+With `--workload-labels` empty, every container is a workload of its own, identified by its container ID, and none of the above applies.
 
-Starting or stopping a container starts no build, so that a container restarting in a loop doesn't rebuild the page every few seconds; where it changes which containers define a service, the page follows on the next build, or on a refresh ([Deploying perdu](deploy.md#refreshing)).
-On the other hand, a container carrying `<prefix>.enable` that perdu ignores, or whose service it sets aside, still starts a build when it is created, updated or removed, and that build runs to completion even though it produces the same pages ([How perdu works](how-it-works.md#when-a-build-runs)).
+Starting or stopping a container starts no build, so that a container restarting in a loop doesn't rebuild the page every few seconds; where it changes which containers define a workload, the page follows on the next build, or on a refresh ([Deploying perdu](deploy.md#refreshing)).
+On the other hand, a container carrying `<prefix>.enable` that perdu ignores, or whose services it sets aside, still starts a build when it is created, updated or removed, and that build runs to completion even though it produces the same pages ([How perdu works](how-it-works.md#when-a-build-runs)).
 
 ## Labels an image declares
 
 **A container's labels include those its image declares**, and perdu reads them as the container's own: image and container labels are merged by docker and indistinguishable when read from containers.
 
-An image declaring `<prefix>.*` labels therefore puts itself on the page as they describe — and can add locales, make every viewer's browser contact a server it names, make perdu fetch `di:` icons it names from jsDelivr, and declare another service's identity labels beside perdu labels of its own, which can put its labels on that service's tile or set the service aside ([Service identity](#service-identity)).
+An image declaring `<prefix>.*` labels therefore puts itself on the page as they describe — and can add locales, make every viewer's browser contact a server it names, make perdu fetch the icons it names from your remotes' hosts, and carry another workload's values for the workload labels beside perdu labels of its own, which can put its labels on that workload's tiles or set its services aside ([Service identity](#service-identity)).
 
 You can override an image's labels on the container, but not remove them; Compose's `!reset` doesn't reach them.
 The levers are `<prefix>.enable=false` on the container, a [`--namespace`](flags.md#--namespace) the image doesn't use, [restricting generated locales](locales.md#which-pages-exist), and not running the image.
@@ -279,18 +315,18 @@ A value that fails leaves its field empty on the pages that show it, and changes
 Perdu never fails the page over a label.
 Each problem costs as little as it can, and is logged at `WARN` on every build while it lasts, once per build per label, naming the label, the entity carrying it and the pages it affects, so that it stays in recent logs.
 
-**These set an entity aside**, logged as `service excluded` or `action excluded`; a service set aside takes its actions with it, while an action set aside leaves its service in place; **neither remove locales**:
+**These set an entity aside**, logged as `service excluded` or `action excluded`, or as `services excluded` for a workload's; a service set aside takes its actions with it, while an action set aside leaves its service in place; **neither remove locales**:
 
+* an `enable` that is empty or isn't a boolean, a mix of `true` and `false` among a workload's containers, or a workload's containers declaring different labels, which sets aside every service the workload declares;
 * a `name` left empty, or with no value to fall back to;
-* an `enable` that is empty or isn't a boolean, a mix of `true` and `false` among a service's containers, or a service's containers declaring different labels;
-* an action key outside its characters, which sets that action aside;
 * an `audience` value outside its characters;
 * an empty element in a `category` or `audience` list;
 * a `category` or `audience` key with a locale;
 * two keys for one field whose locales are one locale spelled two ways, as `<prefix>.name.fr-ch` and `<prefix>.name.fr-CH`, which sets aside the entity carrying the field.
 
-**These are ignored, and the entity stays**, logged as `label ignored`: a key perdu doesn't know under the prefix; a locale it can't use ([Locales](locales.md#translating-labels)); a locale on `enable`.
+**These are ignored, and the entity stays**, logged as `container labels ignored`: a key perdu doesn't know under the prefix; a service or action key outside its character set, whose label declares nothing; a locale on `enable`; and logged as `labels ignored`, a locale perdu can't use ([Locales](locales.md#translating-labels)).
 
 **These leave a value empty, and the entity stays**, logged as `unusable value`: a `url` or an `icon` perdu can't use, and a `data:` icon it can't decode ([Icons](icons.md)); and logged as `icon unresolved`, an icon reference no library answers.
+Note that the entity not being set aside does not mean it will be shown on the page: the template is free to deal with an entity as it sees fit; this release's built-in template does not show actions with an unusable `url`, just as if it were empty.
 
 Nothing is logged for a label left out, an optional label left empty, or `enable=false`.

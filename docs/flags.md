@@ -1,6 +1,6 @@
 # Flags and environment variables
 
-Perdu is configured by flags on its command line, each of which but `--data` can be set by an environment variable instead.
+Perdu is configured by flags on its command line, most of which can be set by an environment variable instead.
 
 `perdu -h` gives a summary of this document.
 
@@ -8,13 +8,13 @@ Perdu is configured by flags on its command line, each of which but `--data` can
 
 Write a flag with two dashes, its value after `=` or as the next argument: `--icons-dir=/icons` or `--icons-dir /icons`.
 
-`-h` or `--help` prints the usage text and exits with status 0, starting nothing.
+`-h` or `--help` prints the usage text and exits with status 0.
 It is read in its place among the arguments, so anything the parse refuses before it — an unknown flag, a repeated one, a stray argument — is reported instead; a flag's value is checked only once every argument has been read, so a value perdu would refuse doesn't stop it.
 
 **Perdu refuses what it can't read unambiguously, and stops at the first refusal**, logging an `ERROR` that names the flag, the value or the entry at fault, and where the value came from:
 
 * an unknown flag, or any argument that isn't a flag;
-* a flag given more than once, even with the same value — `--data` apart, which is given once per rule;
+* a flag given more than once, even with the same value, unless it is [repeatable](#repeatable-flags);
 * a value the flag's own check refuses, which each flag's entry below describes.
 
 The startup sequence logs every flag's value and where it came from at the `INFO` level: `flag`, `env` or `default` ([Reading the logs](logs.md#startup)).
@@ -27,22 +27,27 @@ What an **empty value** means is each flag's own, and its entry says: unset for 
 > A value may need quoting or escaping to reach perdu as you wrote it: a shell, a compose file or an `env_file` each reads it first, by its own rules.
 > Expressions are the values most likely to need it, as [Deploying perdu](deploy.md#compose-stack-example) shows for a compose file.
 
+### Repeatable flags
+
+A **repeatable** flag is given once per entry, as `--data` is once per rule, and its entry below says so.
+It can't be set by an environment variable.
+
 ## Environment variables
 
-Every flag but `--data`, which is given once per rule, can be set by an environment variable: `PERDU_` then the flag's name in capitals, with `_` for `-`, such as `PERDU_ICONS_DIR` for `--icons-dir`.
+Every non-repeatable flag can be set by an environment variable: `PERDU_` then the flag's name in capitals, with `_` for `-`, such as `PERDU_ICONS_DIR` for `--icons-dir`.
 
 The variable is a layer beneath the command line: **a flag given on the command line wins over its variable**, whatever either says.
 That lets a variable an image or a shared `env_file` sets be overridden for one container by its command line.
 
-A variable **set but empty** gives the flag its empty value, just as the flag given empty would, rather than leaving the flag unset: `PERDU_IDENTITY_LABELS=` is the empty list of identity labels.
+A variable **set but empty** gives the flag its empty value, just as the flag given empty would, rather than leaving the flag unset: `PERDU_WORKLOAD_LABELS=` is the empty list of workload labels.
 Conversely, a flag given empty on the command line undoes its variable where the empty value means unset: `--icons-dir=` turns off an icons directory `PERDU_ICONS_DIR` names.
 
-A `PERDU_` variable no flag reads — `PERDU_DATA` among them — is ignored, and one `WARN` at startup names every such variable, so that a mistyped name doesn't go unnoticed.
-The prefix is always `PERDU_`, whatever `--namespace` says.
+A `PERDU_` variable no flag reads — `PERDU_DATA` and `PERDU_ICONS_REMOTE` among them — is ignored, and one `WARN` at startup names every such variable, so that a mistyped name doesn't go unnoticed.
+The prefix is always `PERDU_`, unaffected by `--namespace`.
 
 Where perdu refuses a combination of two flags, it refuses it whichever of the two came from the command line and whichever from a variable.
 
-Docker's own `DOCKER_*` variables set the connection to the docker API ([Deploying perdu](deploy.md#access-to-the-docker-api)), and `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY` the proxy `di:` icons are fetched through ([Deploying perdu](deploy.md#fetching-icons-through-a-proxy)).
+Docker's own `DOCKER_*` variables set the connection to the docker API ([Deploying perdu](deploy.md#access-to-the-docker-api)), and `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY` the proxy a remote's icons are fetched through ([Deploying perdu](deploy.md#fetching-icons-through-a-proxy)).
 Those variables don't have a corresponding flag; they can only be set through the environment.
 
 ## Reference
@@ -59,18 +64,18 @@ Two perdu instances watching one daemon with different namespaces each read only
 * Value: `[a-zA-Z0-9-]+`.
   Anything else is refused, the empty value included: a dot would split a label key and an underscore a cookie name, and a browser silently drops a cookie whose name it can't read.
 
-#### `--identity-labels`
+#### `--workload-labels`
 
-The label keys whose values decide which containers make one service: containers carrying the same value for every key listed are one service, however many there are.
-The default groups the containers of one compose service, its replicas included, into one service.
+The label keys whose values gather containers into one workload, whose labels in turn declare its services: containers carrying the same value for every key listed are one workload, however many there are.
+The default gathers the containers of one compose service, its replicas included, into one workload.
 [Labels](labels.md#service-identity) explains what follows from it.
 
-* Variable: `PERDU_IDENTITY_LABELS`
+* Variable: `PERDU_WORKLOAD_LABELS`
 * Default: `com.docker.compose.project,com.docker.compose.service`
 * Value: a list of label keys.
   A container missing any key listed is never on the page, and perdu logs it at `INFO`.
-* Empty value: the empty list, which makes each container a service of its own, identified by its container ID.
-  A compose service scaled to three replicas is then three identical tiles, which move relative to each other whenever a container is recreated.
+* Empty value: the empty list, which makes each container a workload of its own, identified by its container ID.
+  A compose service scaled to three replicas then shows each of its tiles three times, the copies moving relative to each other whenever a container is recreated.
 * Refused: a key listed twice; a key containing `=`, which docker's label filter can't express; a key under the namespace, such as `perdu.group`.
   A key containing a comma can't be listed: it arrives as two keys, which no container carries.
 
@@ -112,13 +117,29 @@ Under the default, an image's own labels ask for pages too, and a build's work g
 
 #### `--icons-dir`
 
-A directory holding icon libraries of your own, one subdirectory per library, which also overrides the built-in ones ([Icons](icons.md#your-own-icons)).
+A directory holding icon libraries of your own, one subdirectory per library, whose files come before a library's remote ([Icons](icons.md#your-own-icons)).
 
 * Variable: `PERDU_ICONS_DIR`
 * Default: none, and no icon is read from a directory.
 * Value: the directory's path inside perdu's container, where you mount it.
   At startup it must exist and be a readable directory within the startup window, or perdu doesn't start; an empty one only logs a `WARN` ([Deploying perdu](deploy.md#starting)).
 * Empty value: unset.
+
+#### `--icons-remote`
+
+Where a library's icons are fetched from: the URLs holding an icon's name, an optional pattern splitting the name, and modifiers tweaking how a URL's error responses are handled ([Icons](icons.md#remotes)).
+
+* Variable: none.
+* Repeatable: once per library.
+* Default: none, and a library without a remote resolves from your icons directory alone, or, without `--icons-dir`, not at all ([Icons](icons.md#libraries)).
+* Value: `<library>:[<pattern>] <url> [<modifier>…] [<url> [<modifier>…]]…`, its parts separated by spaces, in one argument: `--icons-remote 'logos:https://icons.example.com/{name}.svg'`.
+  The library name follows a library icon's rules ([Icons](icons.md#the-forms-an-icon-takes)).
+  A password in a URL must have its `/`, `?` and `#` percent-encoded, or perdu misreads the URL and logs the rest of the password as written ([Icons](icons.md#credentials-and-http)).
+* Refused, each naming the remote by its library (where it has one):
+  * the value: one naming no library, an empty one included, or starting with its URL, which reads as the library `https`; a library name outside `[a-zA-Z0-9_-]+`, or `http`, `https` or `data`; a second remote for one library; a remote with no URL; a token starting with a word and a `:` that is neither a URL's `http:` or `https:`, in any case, nor a modifier's `retry:` or `not-found:`, wherever it stands, as in `ftp://…` or `Retry:403`; a token after the first that is neither a URL nor a modifier, as a pattern holding a space reads; a modifier before the first URL;
+  * the pattern: one that doesn't compile, or names a group `format`;
+  * a URL: no host; a placeholder outside its path and its query; a brace that opens or closes no placeholder; a placeholder naming no group of the pattern, or, with no pattern, any but `{name}`; a `{format}` without a format list; a second list; a format outside the [accepted ones](icons.md#the-forms-an-icon-takes), or listed twice;
+  * a modifier: a status other than a `4xx` but `404`, `408` and `429`; no status, as in `retry:`; an empty element, as in `retry:403,,405`, or in `retry:403, 405`, whose space ends the modifier after its comma; an outcome given twice for one URL, as in `retry:403 retry:405`; a status given twice for one URL, in one list or under both outcomes.
 
 ### Serving
 
@@ -132,7 +153,7 @@ The addresses perdu listens on.
   An empty host listens on every address of both IPv4 and IPv6, `0.0.0.0` on every IPv4 address only, and `[::]` on every IPv6 address only.
   A host name is resolved at startup, and perdu listens on every address it resolves to.
   An address given twice, in any spelling or through a name, is listened on once.
-* Refused: the empty value; an entry that isn't a host and a port; a port that isn't one.
+* Refused: the empty value; an entry that isn't a host and a port; a port that is neither a number nor a known service name, such as `http`.
   An address the system refuses to listen on, a name that doesn't resolve, and a lookup taking more than 5 seconds each stop perdu at startup.
 
 #### `--base-path`
@@ -176,9 +197,9 @@ A value perdu computes on each page request from an expression, and hands to the
 The built-in template uses one, `name`, to greet the viewer ([Per-viewer data](rules.md#the-greeting)).
 
 * Variable: none.
+* Repeatable: once per name.
 * Default: none.
 * Value: `<name>=<expr>`, one argument split at its first `=` (the expression may hold `=` itself): `--data 'name=headers["remote-name"]'`.
-  Give the flag once per name.
   The name must match `[a-zA-Z0-9_-]+`; it names the cookie, `<prefix>_<name>`.
 * Refused: an argument without `=`, an empty name, or one outside that set; a name given twice; an expression that doesn't compile, or names a request attribute that can never be there ([Per-viewer data](rules.md#when-a-rule-is-refused)); a rule named `audience` if `--audience-expr` is set.
 
